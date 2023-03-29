@@ -4,9 +4,6 @@ import requests
 import os
 from dataclasses import dataclass
 
-# VirusTotal API Key
-APIKEY = "API KEY"
-
 
 #make name of data folder
 dataFolderRootPath = "./data"
@@ -31,7 +28,6 @@ class ScanResult():
 class VtScanner:
     def __init__(self):
         self.base_url = "https://www.virustotal.com/api/v3"
-        self.headers = {"x-apikey": APIKEY}
         #アウトプットのディレクトリ作成
         if not os.path.exists(dataFolderRootPath):
             os.mkdir(dataFolderRootPath)
@@ -80,10 +76,11 @@ class VtScanner:
                 av_result
             )        
 
-    def hashScanner(self,filename:str,hash:str,overwrite:bool)->ScanResult:
+    def hashScanner(self,apikey:str,filename:str,hash:str,overwrite:bool)->ScanResult:
         '''
         SHA256hashをIDとしたレポートを取得する。endpointはfile/{id}のみ
         '''
+        headers = {"x-apikey": apikey}
         #Check Report
         report_check = self.check_file_by_hash(hashScanDataPath,hash)
         #既にスキャン済ファイルがあったとしても上書き設定がONならcheckをオフに。
@@ -119,8 +116,8 @@ class VtScanner:
             url_behaviours = f"{self.base_url}/files/{hash}/behaviours"
 
             # Send the API request
-            response_files = requests.get(url_files, headers=self.headers)
-            response_behaviours = requests.get(url_behaviours, headers=self.headers)
+            response_files = requests.get(url_files, headers=headers)
+            response_behaviours = requests.get(url_behaviours, headers=headers)
 
             #Check the response_files
             if response_files.status_code == 200 and response_behaviours.status_code == 200:

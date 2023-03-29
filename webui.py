@@ -37,6 +37,8 @@ def highlight_not_none(val):
 
 def filehash_scan_page():
     st.title("FileHashscan")
+    api_key = st.text_input('USE APIKEY','')
+    st.write('APYKEY is ',api_key)    
     exist_file_not_scan = st.radio("既にスキャンしたファイルの処理を選んでください", ["結果を再表示", "スキャン結果を上書きする"])
     overwrite =False
     if exist_file_not_scan == "スキャン結果を上書きする":
@@ -67,7 +69,7 @@ def filehash_scan_page():
             n = 1
             for k,v in file_hash_dict.items():
                 scanner = VtScanner()
-                result:ScanResult = scanner.hashScanner(k,v[0],overwrite)
+                result:ScanResult = scanner.hashScanner(api_key,k,v[0],overwrite)
                 score = result.negative
                 detail = result.result_str
                 file_scaned_dict[k] = [v[0], v[1], score, detail]

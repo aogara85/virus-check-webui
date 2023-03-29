@@ -9,12 +9,6 @@ from vt_scanner import VtScanner
 from vt_scanner import ScanResult
 import matplotlib.pyplot as plt
 
-
-def get_file_list(path):
-    data_path = path
-    file_list = os.listdir(data_path)
-    return file_list
-
 def vtScannerResultvView(score):
     if type(score) == int and score > 0 :
         change_color = 'color : red'
@@ -72,13 +66,20 @@ def filehash_scan_page():
                 result:ScanResult = scanner.hashScanner(api_key,k,v[0],overwrite)
                 score = result.negative
                 detail = result.result_str
-                file_scaned_dict[k] = [v[0], v[1], score, detail]
+                positive = result.positive_votes * -1 if result.positive_votes != -1 else 0
+                file_scaned_dict[k] = [ detail, score, result.positive , result.negative_votes]
                 progress_bar.progress(n / len(file_hash_dict))
                 status_text.text(f"処理中... {n * 100 // len(file_hash_dict)}%")
                 n += 1
                 time.sleep(0.1)
             status_text.text("完了")
-            df2 = pd.DataFrame.from_dict(file_scaned_dict, orient='index', columns=['Hash','Magic Number','Negative Score', 'Detail'])
+            st.markdown('''
+            - Result        :アンチウイルスソフトによる結果
+            - Negative Score:アンチウイルスソフトの検知数
+            - +votes        :コミュニティのポジティブな投票
+            - -votes        :コミュニティのネガティブな投票
+            ''')
+            df2 = pd.DataFrame.from_dict(file_scaned_dict, orient='index', columns=['Result','Negative Score','+votes','-votes'])
             df2.index.name = 'File Name'
         # データフレームを表示
             st.write(df2.style.applymap(vtScannerResultvView))
@@ -104,12 +105,12 @@ def result_viewer():
         既にスキャン済のファイルを閲覧するモードです。
         '''
     )
-    choice_result_viewer_file = st.selectbox("Select data",get_file_list("data\\hashscan"))
+    scanner = VtScanner()
+    choice_result_viewer_file = st.selectbox("Select data",sorted(scanner.get_file_list(),key=len))
     if choice_result_viewer_file:
         jsonfile_path = os.path.join("./data\\hashscan", choice_result_viewer_file)
         tab1, tab2 = st.tabs(["AV scans", "raw Data"])
         with tab1:
-            scanner = VtScanner()
             read_result:ScanResult = scanner.jsonDataConverter(f"data\\hashscan\\{choice_result_viewer_file}")
             df = pd.DataFrame.from_dict(read_result.scans).T
             styled_df = df.style.applymap(highlight_not_none, subset=["result"])

@@ -6,9 +6,9 @@ from dataclasses import dataclass
 
 
 #make name of data folder
-dataFolderRootPath = "./data"
-hashScanDataPath = "./data/hashscan"
-urlScanDataPath = "./data/urlscan"
+DATA_FOLDER_ROOT_PATH = "./data"
+HASH_SCAN_DATA_PATH = "./data/hashscan"
+URL_SCAN_DATA_PATH = "./data/urlscan"
 
 @dataclass
 class ScanResult():
@@ -29,10 +29,10 @@ class VtScanner:
     def __init__(self):
         self.base_url = "https://www.virustotal.com/api/v3"
         #アウトプットのディレクトリ作成
-        if not os.path.exists(dataFolderRootPath):
-            os.mkdir(dataFolderRootPath)
-            os.mkdir(hashScanDataPath)
-            os.mkdir(urlScanDataPath)
+        if not os.path.exists(DATA_FOLDER_ROOT_PATH):
+            os.mkdir(DATA_FOLDER_ROOT_PATH)
+            os.mkdir(HASH_SCAN_DATA_PATH)
+            os.mkdir(URL_SCAN_DATA_PATH)
 
     def check_file_by_hash(self,dir_path, hash_value):
         '''
@@ -74,7 +74,12 @@ class VtScanner:
                 positive_votes,
                 jsondata["data"]["attributes"]["type_tags"],
                 av_result
-            )        
+            )
+        
+    def get_file_list(self)->list[str]:
+        file_list = os.listdir(HASH_SCAN_DATA_PATH)
+        return file_list
+
 
     def hashScanner(self,apikey:str,filename:str,hash:str,overwrite:bool)->ScanResult:
         '''
@@ -82,11 +87,11 @@ class VtScanner:
         '''
         headers = {"x-apikey": apikey}
         #Check Report
-        report_check = self.check_file_by_hash(hashScanDataPath,hash)
+        report_check = self.check_file_by_hash(HASH_SCAN_DATA_PATH,hash)
         #既にスキャン済ファイルがあったとしても上書き設定がONならcheckをオフに。
         if overwrite == True:
             report_check[0] = False
-        output_filename = f"{hashScanDataPath}/{filename}_{hash}.json"
+        output_filename = f"{HASH_SCAN_DATA_PATH}/{filename}_{hash}.json"
         #既にスキャン済ファイルであれば、jsonファイルから読み出す。
         if report_check[0] :
             with open(report_check[1], "r") as f:

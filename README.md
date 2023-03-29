@@ -1,7 +1,6 @@
 # virus-check-webui
 ## 概要
-　個人向けのVirusTotalを用いたVirusScanを行えるツールです。APIKEYは必要のためVirusTotalのアカウントを作ってください。
-  あくまで現在は試験的なスクリプトです。
+　個人向けのVirusTotalを用いたVirusScanを行えるツールです。APIKEYは必要のためVirusTotalのアカウントを作ってください。  あくまで現在は試験的なスクリプトです。
 ## 目的
 - VirusTotalのwebAPIをwebUIから叩く(今後他の機能も付けるかも)
 - とりあえずstreamlitを触ってみたい

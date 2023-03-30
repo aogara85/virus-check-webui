@@ -17,7 +17,6 @@ class ScanResult():
     '''
     result_str:str
     detected: bool
-    sha256:str
     negative:int
     positive: int
     total:int
@@ -25,6 +24,7 @@ class ScanResult():
     positive_votes: int
     type_tags: list
     scans: dict
+    id:str
 
 class VtScanner:
     def __init__(self):
@@ -51,7 +51,7 @@ class VtScanner:
         '''
         for file in self.get_file_list()[1]:
             scanresult = self.jsonDataConverter(file)
-            return (True,file) if hash_value == scanresult.sha256 else (False,"")
+            return (True,file) if hash_value == scanresult.id else (False,"")
   
     
     def jsonDataConverter(self,json_data)->ScanResult:
@@ -71,14 +71,14 @@ class VtScanner:
             return ScanResult(
                 "Detected" if negative > 0 else "Safe",
                 True if negative > 0 else False,
-                jsondata["data"]["attributes"]["sha256"],
                 negative,
                 positive,
                 total,
                 negative_votes,
                 positive_votes,
                 jsondata["data"]["attributes"]["type_tags"],
-                av_result
+                av_result,
+                jsondata["data"]["id"]
             )
         
     def hashScanner(self,apikey:str,filename:str,hash:str,overwrite:bool)->ScanResult:
@@ -107,14 +107,14 @@ class VtScanner:
                 return ScanResult(
                     "Detected" if negative > 0 else "Safe",
                     True if negative > 0 else False,
-                    jsondata["data"]["attributes"]["sha256"],
                     negative,
                     positive,
                     total,
                     negative_votes,
                     positive_votes,
                     jsondata["data"]["attributes"]["type_tags"],
-                    av_result
+                    av_result,
+                    jsondata["data"]["id"]
                 )
         else:
             # URL for the VirusTotal API
@@ -146,25 +146,25 @@ class VtScanner:
                 return ScanResult(
                     "Detected" if negative > 0 else "Safe",
                     True if negative > 0 else False,
-                    jsondata["data"]["attributes"]["sha256"],
                     negative,
                     positive,
                     total,
                     negative_votes,
                     positive_votes,
                     result["data"]["attributes"]["type_tags"],
-                    av_result
+                    av_result,
+                    jsondata["data"]["id"]                    
                 )
             else:
                 return ScanResult(
                     "Not found",
                     False,
-                    "",
                     -1,
                     -1,
                     -1,
                     -1,
                     -1,
                     [],
-                    {}
+                    {},
+                    ""
                 )

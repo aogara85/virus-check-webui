@@ -25,6 +25,14 @@ def vtScannerResultvView(score):
 def highlight_not_none(val):
     if val is None:
         return ""
+    elif val == "type-unsupported" or val == "timeout":
+        return ""
+    elif val == "undetected":
+        return "color : green"
+    elif val == "malicious":
+        return 'color : red'
+    elif val =="suspicious":
+        return 'color : orange'
     else:
         return "background-color: red"
 
@@ -113,12 +121,12 @@ def result_viewer():
         with tab1:
             read_result:ScanResult = scanner.jsonDataConverter(choice_result_viewer_file)
             df = pd.DataFrame.from_dict(read_result.scans).T
-            styled_df = df.style.applymap(highlight_not_none, subset=["result"])
+            styled_df = df.style.applymap(highlight_not_none, subset=["category","result"])
             st.dataframe(styled_df)
         with tab2:
             with open(choice_result_viewer_file, "r") as f:
                 json_data = json.load(f)            
-            st.write(json_data)
+            st.write(json_data["behaviours"])
 
 def main():
     # サイドバーの設定

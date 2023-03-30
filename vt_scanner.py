@@ -9,9 +9,10 @@ from dataclasses import dataclass
 DATA_FOLDER_ROOT_PATH = ".\\data"
 HASH_SCAN_DATA_PATH = ".\\data\\hashscan"
 URL_SCAN_DATA_PATH = ".\\data\\urlscan"
+IP_SCAN_DATA_PATH = ".\\data\\ipscan"
 
 @dataclass
-class ScanResult():
+class ScanResult:
     '''
     スキャン結果を格納する構造体
     '''
@@ -22,7 +23,7 @@ class ScanResult():
     total:int
     negative_votes:int
     positive_votes: int
-    type_tags: list
+    tags: list
     scans: dict
     id:str
 
@@ -34,6 +35,7 @@ class VtScanner:
             os.mkdir(DATA_FOLDER_ROOT_PATH)
             os.mkdir(HASH_SCAN_DATA_PATH)
             os.mkdir(URL_SCAN_DATA_PATH)
+            os.mkdir(IP_SCAN_DATA_PATH)
 
     def get_file_list(self)->tuple[list[str],list[str]]:
         '''
@@ -51,7 +53,13 @@ class VtScanner:
         '''
         for file in self.get_file_list()[1]:
             scanresult = self.jsonDataConverter(file)
-            return (True,file) if hash_value == scanresult.id else (False,"")
+            print(hash_value,"==",scanresult.id)
+            #print(scanresult.id)
+            if hash_value == scanresult.id:
+                return (True,file)
+            else:
+                continue
+        return (False,"")
   
     
     def jsonDataConverter(self,json_data)->ScanResult:
@@ -76,7 +84,7 @@ class VtScanner:
                 total,
                 negative_votes,
                 positive_votes,
-                jsondata["data"]["attributes"]["type_tags"],
+                jsondata["data"]["attributes"]["tags"],
                 av_result,
                 jsondata["data"]["id"]
             )
@@ -94,28 +102,7 @@ class VtScanner:
         output_filename = f"{HASH_SCAN_DATA_PATH}/{filename}.json"
         #既にスキャン済ファイルであれば、jsonファイルから読み出す。
         if report_check[0] :
-            with open(report_check[1], "r") as f:
-                jsondata = json.load(f)
-                negative = jsondata["data"]["attributes"]["last_analysis_stats"]["malicious"]
-                + jsondata["data"]["attributes"]["last_analysis_stats"]["suspicious"]
-                positive = jsondata["data"]["attributes"]["last_analysis_stats"]["harmless"]
-                + jsondata["data"]["attributes"]["last_analysis_stats"]["undetected"]
-                total = jsondata["data"]["attributes"]["last_analysis_stats"]["type-unsupported"] + negative + positive
-                positive_votes:int = jsondata["data"]["attributes"]["total_votes"]["harmless"]
-                negative_votes:int = jsondata["data"]["attributes"]["total_votes"]["malicious"]
-                av_result:dict = jsondata["data"]["attributes"]["last_analysis_results"]
-                return ScanResult(
-                    "Detected" if negative > 0 else "Safe",
-                    True if negative > 0 else False,
-                    negative,
-                    positive,
-                    total,
-                    negative_votes,
-                    positive_votes,
-                    jsondata["data"]["attributes"]["type_tags"],
-                    av_result,
-                    jsondata["data"]["id"]
-                )
+            return self.jsonDataConverter(report_check[1])
         else:
             # URL for the VirusTotal API
             url_files = f"{self.base_url}/files/{hash}"
@@ -151,9 +138,9 @@ class VtScanner:
                     total,
                     negative_votes,
                     positive_votes,
-                    result["data"]["attributes"]["type_tags"],
+                    result["data"]["attributes"]["tags"],
                     av_result,
-                    jsondata["data"]["id"]                    
+                    result["data"]["id"]                    
                 )
             else:
                 return ScanResult(

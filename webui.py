@@ -106,17 +106,17 @@ def result_viewer():
         '''
     )
     scanner = VtScanner()
-    choice_result_viewer_file = st.selectbox("Select data",sorted(scanner.get_file_list(),key=len))
+    file_path_list = scanner.get_file_list()
+    choice_result_viewer_file = st.selectbox("Select data",sorted(file_path_list[1],key=len))
     if choice_result_viewer_file:
-        jsonfile_path = os.path.join("./data\\hashscan", choice_result_viewer_file)
         tab1, tab2 = st.tabs(["AV scans", "raw Data"])
         with tab1:
-            read_result:ScanResult = scanner.jsonDataConverter(f"data\\hashscan\\{choice_result_viewer_file}")
+            read_result:ScanResult = scanner.jsonDataConverter(choice_result_viewer_file)
             df = pd.DataFrame.from_dict(read_result.scans).T
             styled_df = df.style.applymap(highlight_not_none, subset=["result"])
             st.dataframe(styled_df)
         with tab2:
-            with open(jsonfile_path, "r") as f:
+            with open(choice_result_viewer_file, "r") as f:
                 json_data = json.load(f)            
             st.write(json_data)
 

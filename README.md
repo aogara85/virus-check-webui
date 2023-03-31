@@ -16,4 +16,5 @@ pip install streamlit matplotlib pandas
 ```python
 stremlit run .\webui.py
 ```
--デフォルトのブラウザが立ち上がり、localhost:8501に自動的にアクセスします。
+- デフォルトのブラウザが立ち上がり、localhost:8501に自動的にアクセスします。
+- アップロードしたファイルは、サーバー側のメモリに読み込まれるだけで保存はされません。

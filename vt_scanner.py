@@ -1,5 +1,6 @@
 import json
 import re
+import sqlite3
 import requests
 import os
 from dataclasses import dataclass
@@ -53,8 +54,6 @@ class VtScanner:
         '''
         for file in self.get_file_list()[1]:
             scanresult = self.jsonDataConverter(file)
-            print(hash_value,"==",scanresult.id)
-            #print(scanresult.id)
             if hash_value == scanresult.id:
                 return (True,file)
             else:
@@ -155,3 +154,39 @@ class VtScanner:
                     {},
                     ""
                 )
+
+    def ipScanner(self,apikey:str):
+        headers = {"x-apikey": apikey}
+
+    def chromeHistoryExtractor(self):
+        # Chromeの履歴データベースのパスを取得
+        #r'\\AppData\\Local\\Google\\Chrome\\User Data\\Default'
+        data_path_ch = os.path.expanduser('~') + r'\\Desktop'
+        history_db_ch = os.path.join(data_path_ch, 'History')
+        if not os.path.isfile(history_db_ch):
+            raise Exception("Chrome history database not found")
+        # 履歴データベースに接続
+        with sqlite3.connect(history_db_ch) as c:
+            cursor = c.cursor()
+        # urlsテーブルから必要な情報を取得
+        select_statement = "SELECT urls.url, urls.title, visits.visit_time FROM urls, visits WHERE urls.id = visits.url;"
+        cursor.execute(select_statement)
+
+        # カラム名を取得
+        columns = [description[0] for description in cursor.description]
+
+        try:
+            # 結果を出力
+            results = cursor.fetchall()
+
+            if results is not None:
+                # カラム名を出力
+                print(columns,'colums')
+
+            # 結果を出力
+            for row in results:
+                print(row,'row')
+            else:
+                print("No history found in Chrome.")
+        except TypeError:
+            print("Error: Failed to fetch history from Chrome database.")

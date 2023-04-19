@@ -105,6 +105,11 @@ def filehash_scan_page():
 
 def url_scan_page():
     st.title("URL scan")
+    api_key = st.text_input('USE APIKEY','')
+    st.write('APYKEY is ',api_key)
+    if st.button('Scan Start'):
+        scanner = VtScanner()
+        scanner.chromeHistoryExtractor()
 
 def result_viewer():
     st.title("Result Viewer")

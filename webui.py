@@ -27,14 +27,17 @@ def highlight_not_none(val):
         return ""
     elif val == "type-unsupported" or val == "timeout":
         return ""
-    elif val == "undetected":
+    elif val == "undetected" or val == "harmless" or val == "clean":
         return "color : green"
     elif val == "malicious":
         return 'color : red'
-    elif val =="suspicious":
+    elif val =="suspicious" or val == "spam":
         return 'color : orange'
-    else:
+    elif val == "phishing":
         return "background-color: red"
+    else:
+        return ""
+
 
 
 def filehash_scan_page():
@@ -75,6 +78,7 @@ def filehash_scan_page():
                 score = result.negative
                 detail = result.result_str
                 positive = result.positive_votes * -1 if result.positive_votes != -1 else 0
+                #[result_str,negative,positive,result.negative_votes]
                 file_scaned_dict[k] = [ detail, score, result.positive , result.negative_votes]
                 progress_bar.progress(n / len(file_hash_dict))
                 status_text.text(f"処理中... {n * 100 // len(file_hash_dict)}%")
@@ -107,12 +111,23 @@ def url_scan_page():
     st.title("URL scan")
     api_key = st.text_input('USE APIKEY','')
     st.write('APYKEY is ',api_key)
+    ips_urls = st.text_area("スキャンするIP、URLを入力してください。", "")
     if st.button('Scan Start'):
+        ips_urls_list =ips_urls.split("\n")
         scanner = VtScanner()
-        scanner.chromeHistoryExtractor()
+        result_dict = {}
+        if ips_urls_list:
+            for ip_url in ips_urls_list:
+                result = scanner.ip_UrlScanner(api_key,ip_url.strip())
+                result_dict[ip_url.strip()] = [result.result_str,result.negative,result.positive,result.negative_votes]
+        df = pd.DataFrame.from_dict(result_dict, orient='index', columns=['Result','Negative Score','+votes','-votes'])
+        df.index.name = 'Target'
+        st.write(df.style.applymap(vtScannerResultvView))
 
 def result_viewer():
     st.title("Result Viewer")
+    options = ["FileScan", "URLScan", "Option 3"]
+    selected_option = st.radio("Choose an option", options)
     st.markdown(
         '''
         既にスキャン済のファイルを閲覧するモードです。
@@ -120,18 +135,32 @@ def result_viewer():
     )
     scanner = VtScanner()
     file_path_list = scanner.get_file_list()
-    choice_result_viewer_file = st.selectbox("Select data",sorted(file_path_list[1],key=len))
-    if choice_result_viewer_file:
-        tab1, tab2 = st.tabs(["AV scans", "raw Data"])
-        with tab1:
-            read_result:ScanResult = scanner.jsonDataConverter(choice_result_viewer_file)
-            df = pd.DataFrame.from_dict(read_result.scans).T
-            styled_df = df.style.applymap(highlight_not_none, subset=["category","result"])
-            st.dataframe(styled_df)
-        with tab2:
-            with open(choice_result_viewer_file, "r") as f:
-                json_data = json.load(f)            
-            st.write(json_data["behaviours"])
+    if selected_option == "FileScan":
+        choice_result_viewer_file = st.selectbox("Select data",sorted(file_path_list[1],key=len))
+        if choice_result_viewer_file:
+            tab1, tab2 = st.tabs(["AV scans", "raw Data"])
+            with tab1:
+                read_result:ScanResult = scanner.jsonDataConverter(choice_result_viewer_file)
+                df = pd.DataFrame.from_dict(read_result.scans).T
+                styled_df = df.style.applymap(highlight_not_none, subset=["category","result"])
+                st.dataframe(styled_df)
+            with tab2:
+                with open(choice_result_viewer_file, "r") as f:
+                    json_data = json.load(f)            
+                st.write(json_data["behaviours"])
+    elif selected_option == "URLScan":
+        choice_result_viewer_file = st.selectbox("Select data",sorted(file_path_list[2],key=len))
+        if choice_result_viewer_file:
+            tab1, tab2 = st.tabs(["AV scans", "raw Data"])
+            with tab1:
+                read_result:ScanResult = scanner.jsonDataConverter(choice_result_viewer_file)
+                df = pd.DataFrame.from_dict(read_result.scans).T
+                styled_df = df.style.applymap(highlight_not_none, subset=["category","result"])
+                st.dataframe(styled_df)
+            with tab2:
+                with open(choice_result_viewer_file, "r") as f:
+                    json_data = json.load(f)            
+                st.write(json_data)        
 
 def main():
     # サイドバーの設定

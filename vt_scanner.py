@@ -1,5 +1,6 @@
 import json
-import re
+import hashlib
+import base64
 import sqlite3
 import requests
 import os
@@ -43,10 +44,18 @@ class VtScanner:
         スキャン結果の保存先のファイル名と相対パスのタプルを返す
         '''
         file_fullpath_list = []
+        file_fullpath_list_url = []
+        file_fullpath_list_ip = []
         file_list = os.listdir(HASH_SCAN_DATA_PATH)
+        file_list_url = os.listdir(URL_SCAN_DATA_PATH)
+        file_list_ip = os.listdir(IP_SCAN_DATA_PATH)
         for filename in file_list:
             file_fullpath_list.append(os.path.join(HASH_SCAN_DATA_PATH,filename))
-        return (file_list,file_fullpath_list)
+        for filename in file_list_url:
+            file_fullpath_list_url.append(os.path.join(URL_SCAN_DATA_PATH,filename))
+        for filename in file_list_ip:
+            file_fullpath_list_ip.append(os.path.join(IP_SCAN_DATA_PATH,filename))
+        return (file_list,file_fullpath_list,file_fullpath_list_url,file_fullpath_list_ip)
 
     def check_file_by_hash(self,hash_value)->tuple[bool,str]:
         '''
@@ -71,7 +80,10 @@ class VtScanner:
             + jsondata["data"]["attributes"]["last_analysis_stats"]["suspicious"]
             positive = jsondata["data"]["attributes"]["last_analysis_stats"]["harmless"]
             + jsondata["data"]["attributes"]["last_analysis_stats"]["undetected"]
-            total = jsondata["data"]["attributes"]["last_analysis_stats"]["type-unsupported"] + negative + positive
+            if jsondata["data"]["type"] == "file":
+                total = jsondata["data"]["attributes"]["last_analysis_stats"]["type-unsupported"] + negative + positive
+            else:
+                total = jsondata["data"]["attributes"]["last_analysis_stats"]["undetected"] + negative + positive
             positive_votes:int = jsondata["data"]["attributes"]["total_votes"]["harmless"]
             negative_votes:int = jsondata["data"]["attributes"]["total_votes"]["malicious"]
             av_result:dict = jsondata["data"]["attributes"]["last_analysis_results"]
@@ -155,13 +167,96 @@ class VtScanner:
                     ""
                 )
 
-    def ipScanner(self,apikey:str):
+    def ip_UrlScanner(self,apikey:str,ip_url:str):
         headers = {"x-apikey": apikey}
-
+        # URLかIPアドレスかを判別する
+        if ip_url.startswith("http") or ip_url.startswith("https"):
+            # URLの場合、URLのSHA-256ハッシュ値を取得する
+            url_sha256 = hashlib.sha256(ip_url.encode('utf-8')).hexdigest()
+            output_filename = f"{URL_SCAN_DATA_PATH}/{url_sha256}.json"
+            # Virustotal APIを使用して、URLの情報を取得する
+            url_response = requests.get(self.base_url + "/urls/" + url_sha256, headers=headers)
+            if url_response.status_code == 200:
+                result_url = url_response.json()
+                with open(output_filename, "w") as outfile:
+                    json.dump(result_url, outfile)                
+                negative = result_url["data"]["attributes"]["last_analysis_stats"]["malicious"]
+                + result_url["data"]["attributes"]["last_analysis_stats"]["suspicious"]
+                positive = result_url["data"]["attributes"]["last_analysis_stats"]["harmless"]
+                + result_url["data"]["attributes"]["last_analysis_stats"]["undetected"]
+                total = result_url["data"]["attributes"]["last_analysis_stats"]["undetected"] + negative + positive
+                positive_votes:int = result_url["data"]["attributes"]["total_votes"]["harmless"]
+                negative_votes:int = result_url["data"]["attributes"]["total_votes"]["malicious"]
+                av_result:dict = result_url["data"]["attributes"]["last_analysis_results"]
+                return ScanResult(
+                    "Detected" if negative > 0 else "Safe",
+                    True if negative > 0 else False,
+                    negative,
+                    positive,
+                    total,
+                    negative_votes,
+                    positive_votes,
+                    result_url["data"]["attributes"]["tags"],
+                    av_result,
+                    result_url["data"]["id"]
+                )
+            else:
+                return ScanResult(
+                    "Not found",
+                    False,
+                    -1,
+                    -1,
+                    -1,
+                    -1,
+                    -1,
+                    [],
+                    {},
+                    ""
+                )
+        else:
+            # IPアドレスの場合、IPアドレスの情報を取得する
+            output_filename = f"{IP_SCAN_DATA_PATH}/{ip_url}.json"
+            ip_response = requests.get(self.base_url + "ip_addresses/" + ip_url, headers=headers)
+            if ip_response.status_code == 200:
+                result_ip = ip_response.json()
+                negative = result_ip["data"]["attributes"]["last_analysis_stats"]["malicious"]
+                + result_ip["data"]["attributes"]["last_analysis_stats"]["suspicious"]
+                positive = result_ip["data"]["attributes"]["last_analysis_stats"]["harmless"]
+                + result_ip["data"]["attributes"]["last_analysis_stats"]["undetected"]
+                total = result_ip["data"]["attributes"]["last_analysis_stats"]["type-unsupported"] + negative + positive
+                positive_votes:int = result_ip["data"]["attributes"]["total_votes"]["harmless"]
+                negative_votes:int = result_ip["data"]["attributes"]["total_votes"]["malicious"]
+                av_result:dict = result_ip["data"]["attributes"]["last_analysis_results"]
+                return ScanResult(
+                    "Detected" if negative > 0 else "Safe",
+                    True if negative > 0 else False,
+                    negative,
+                    positive,
+                    total,
+                    negative_votes,
+                    positive_votes,
+                    result_ip["data"]["attributes"]["tags"],
+                    av_result,
+                    result_ip["data"]["id"]
+                )
+            else:
+                return ScanResult(
+                    "Not found",
+                    False,
+                    -1,
+                    -1,
+                    -1,
+                    -1,
+                    -1,
+                    [],
+                    {},
+                    ""
+                )
+                
     def chromeHistoryExtractor(self):
         # Chromeの履歴データベースのパスを取得
         #r'\\AppData\\Local\\Google\\Chrome\\User Data\\Default'
-        data_path_ch = os.path.expanduser('~') + r'\\AppData\\Local\\Google\\Chrome\\User Data\\Default'
+        data_path_ch = os.path.expanduser('~') + r'\\Desktop'
         history_db_ch = os.path.join(data_path_ch, 'History')
         if not os.path.isfile(history_db_ch):
             raise Exception("Chrome history database not found")
@@ -170,8 +265,9 @@ class VtScanner:
             cursor = c.cursor()
         # urlsテーブルから必要な情報を取得
         select_statement = "SELECT urls.url, urls.title, visits.visit_time FROM urls, visits WHERE urls.id = visits.url;"
-        cursor.execute(select_statement)
-
+        sql = 'SELECT url, title FROM urls ORDER BY last_visit_time DESC LIMIT 20'
+        #cursor.execute(select_statement)
+        cursor.execute(sql)
         # カラム名を取得
         columns = [description[0] for description in cursor.description]
 
@@ -184,9 +280,13 @@ class VtScanner:
                 print(columns,'colums')
 
             # 結果を出力
+            n = 0
             for row in results:
-                print(row,'row')
+                n +=1
+                print(n,row)
             else:
                 print("No history found in Chrome.")
+            
+            cursor.close()
         except TypeError:
             print("Error: Failed to fetch history from Chrome database.")

@@ -161,7 +161,7 @@ class VtScanner:
     def chromeHistoryExtractor(self):
         # Chromeの履歴データベースのパスを取得
         #r'\\AppData\\Local\\Google\\Chrome\\User Data\\Default'
-        data_path_ch = os.path.expanduser('~') + r'\\Desktop'
+        data_path_ch = os.path.expanduser('~') + r'\\AppData\\Local\\Google\\Chrome\\User Data\\Default'
         history_db_ch = os.path.join(data_path_ch, 'History')
         if not os.path.isfile(history_db_ch):
             raise Exception("Chrome history database not found")

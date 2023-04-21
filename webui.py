@@ -119,14 +119,14 @@ def url_scan_page():
         if ips_urls_list:
             for ip_url in ips_urls_list:
                 result = scanner.ip_UrlScanner(api_key,ip_url.strip())
-                result_dict[ip_url.strip()] = [result.result_str,result.negative,result.positive,result.negative_votes]
+                result_dict[ip_url.strip()] = [result.result_str,result.negative,result.positive_votes,result.negative_votes]
         df = pd.DataFrame.from_dict(result_dict, orient='index', columns=['Result','Negative Score','+votes','-votes'])
         df.index.name = 'Target'
         st.write(df.style.applymap(vtScannerResultvView))
 
 def result_viewer():
     st.title("Result Viewer")
-    options = ["FileScan", "URLScan", "Option 3"]
+    options = ["FileScan", "URLScan", "IPScan"]
     selected_option = st.radio("Choose an option", options)
     st.markdown(
         '''
@@ -160,7 +160,20 @@ def result_viewer():
             with tab2:
                 with open(choice_result_viewer_file, "r") as f:
                     json_data = json.load(f)            
-                st.write(json_data)        
+                st.write(json_data)
+    elif selected_option == "IPScan":
+        choice_result_viewer_file = st.selectbox("Select data",sorted(file_path_list[3],key=len))
+        if choice_result_viewer_file:
+            tab1, tab2 = st.tabs(["AV scans", "raw Data"])
+            with tab1:
+                read_result:ScanResult = scanner.jsonDataConverter(choice_result_viewer_file)
+                df = pd.DataFrame.from_dict(read_result.scans).T
+                styled_df = df.style.applymap(highlight_not_none, subset=["category","result"])
+                st.dataframe(styled_df)
+            with tab2:
+                with open(choice_result_viewer_file, "r") as f:
+                    json_data = json.load(f)            
+                st.write(json_data)     
 
 def main():
     # サイドバーの設定

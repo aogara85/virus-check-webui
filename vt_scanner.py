@@ -216,14 +216,16 @@ class VtScanner:
         else:
             # IPアドレスの場合、IPアドレスの情報を取得する
             output_filename = f"{IP_SCAN_DATA_PATH}/{ip_url}.json"
-            ip_response = requests.get(self.base_url + "ip_addresses/" + ip_url, headers=headers)
+            ip_response = requests.get(self.base_url + "/ip_addresses/" + ip_url, headers=headers)
             if ip_response.status_code == 200:
-                result_ip = ip_response.json()
+                result_ip = ip_response.json()                
+                with open(output_filename, "w") as outfile:
+                    json.dump(result_ip, outfile)                 
                 negative = result_ip["data"]["attributes"]["last_analysis_stats"]["malicious"]
                 + result_ip["data"]["attributes"]["last_analysis_stats"]["suspicious"]
                 positive = result_ip["data"]["attributes"]["last_analysis_stats"]["harmless"]
                 + result_ip["data"]["attributes"]["last_analysis_stats"]["undetected"]
-                total = result_ip["data"]["attributes"]["last_analysis_stats"]["type-unsupported"] + negative + positive
+                total = result_ip["data"]["attributes"]["last_analysis_stats"]["undetected"] + negative + positive
                 positive_votes:int = result_ip["data"]["attributes"]["total_votes"]["harmless"]
                 negative_votes:int = result_ip["data"]["attributes"]["total_votes"]["malicious"]
                 av_result:dict = result_ip["data"]["attributes"]["last_analysis_results"]

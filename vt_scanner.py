@@ -85,7 +85,6 @@ class VtScanner:
         '''
         読み込んだjsonファイルをScanResultにパースして返す。
         '''
-        #jsondata = json.load(json_obj)
         negative = jsondata["data"]["attributes"]["last_analysis_stats"]["malicious"]
         + jsondata["data"]["attributes"]["last_analysis_stats"]["suspicious"]
         positive = jsondata["data"]["attributes"]["last_analysis_stats"]["harmless"]
@@ -143,28 +142,7 @@ class VtScanner:
                 result["behaviours"] = result_behaviours
                 with open(output_filename, "w") as outfile:
                     json.dump(result, outfile)
-                #filesエンドポイントの処理
-                negative = result["data"]["attributes"]["last_analysis_stats"]["malicious"]
-                + result["data"]["attributes"]["last_analysis_stats"]["suspicious"]
-                positive = result["data"]["attributes"]["last_analysis_stats"]["harmless"]
-                + result["data"]["attributes"]["last_analysis_stats"]["undetected"]
-                total = result["data"]["attributes"]["last_analysis_stats"]["type-unsupported"] + negative + positive
-                positive_votes:int = result["data"]["attributes"]["total_votes"]["harmless"]
-                negative_votes:int = result["data"]["attributes"]["total_votes"]["malicious"]
-                av_result:dict = result["data"]["attributes"]["last_analysis_results"]
-
-                return ScanResult(
-                    "Detected" if negative > 0 else "Safe",
-                    True if negative > 0 else False,
-                    negative,
-                    positive,
-                    total,
-                    negative_votes,
-                    positive_votes,
-                    result["data"]["attributes"]["tags"],
-                    av_result,
-                    result["data"]["id"]                    
-                )
+                return self.jsonDataConverter(result)
             else:
                 return ScanResult(
                     "Not found",
@@ -201,26 +179,7 @@ class VtScanner:
                     result_url = url_response.json()
                     with open(output_filename, "w") as outfile:
                         json.dump(result_url, outfile)                
-                    negative = result_url["data"]["attributes"]["last_analysis_stats"]["malicious"]
-                    + result_url["data"]["attributes"]["last_analysis_stats"]["suspicious"]
-                    positive = result_url["data"]["attributes"]["last_analysis_stats"]["harmless"]
-                    + result_url["data"]["attributes"]["last_analysis_stats"]["undetected"]
-                    total = result_url["data"]["attributes"]["last_analysis_stats"]["undetected"] + negative + positive
-                    positive_votes:int = result_url["data"]["attributes"]["total_votes"]["harmless"]
-                    negative_votes:int = result_url["data"]["attributes"]["total_votes"]["malicious"]
-                    av_result:dict = result_url["data"]["attributes"]["last_analysis_results"]
-                    return ScanResult(
-                        "Detected" if negative > 0 else "Safe",
-                        True if negative > 0 else False,
-                        negative,
-                        positive,
-                        total,
-                        negative_votes,
-                        positive_votes,
-                        result_url["data"]["attributes"]["tags"],
-                        av_result,
-                        result_url["data"]["id"]
-                    )
+                    return self.jsonDataConverter(result_url)
                 else:
                     return ScanResult(
                         "Not found",
@@ -249,26 +208,7 @@ class VtScanner:
                     result_ip = ip_response.json()                
                     with open(output_filename, "w") as outfile:
                         json.dump(result_ip, outfile)                 
-                    negative = result_ip["data"]["attributes"]["last_analysis_stats"]["malicious"]
-                    + result_ip["data"]["attributes"]["last_analysis_stats"]["suspicious"]
-                    positive = result_ip["data"]["attributes"]["last_analysis_stats"]["harmless"]
-                    + result_ip["data"]["attributes"]["last_analysis_stats"]["undetected"]
-                    total = result_ip["data"]["attributes"]["last_analysis_stats"]["undetected"] + negative + positive
-                    positive_votes:int = result_ip["data"]["attributes"]["total_votes"]["harmless"]
-                    negative_votes:int = result_ip["data"]["attributes"]["total_votes"]["malicious"]
-                    av_result:dict = result_ip["data"]["attributes"]["last_analysis_results"]
-                    return ScanResult(
-                        "Detected" if negative > 0 else "Safe",
-                        True if negative > 0 else False,
-                        negative,
-                        positive,
-                        total,
-                        negative_votes,
-                        positive_votes,
-                        result_ip["data"]["attributes"]["tags"],
-                        av_result,
-                        result_ip["data"]["id"]
-                    )
+                    return self.jsonDataConverter(result_ip)
                 else:
                     return ScanResult(
                         "Not found",
@@ -297,26 +237,7 @@ class VtScanner:
                     result_domain = domain_response.json()                
                     with open(output_filename, "w") as outfile:
                         json.dump(result_domain, outfile)                 
-                    negative = result_domain["data"]["attributes"]["last_analysis_stats"]["malicious"]
-                    + result_domain["data"]["attributes"]["last_analysis_stats"]["suspicious"]
-                    positive = result_domain["data"]["attributes"]["last_analysis_stats"]["harmless"]
-                    + result_domain["data"]["attributes"]["last_analysis_stats"]["undetected"]
-                    total = result_domain["data"]["attributes"]["last_analysis_stats"]["undetected"] + negative + positive
-                    positive_votes:int = result_domain["data"]["attributes"]["total_votes"]["harmless"]
-                    negative_votes:int = result_domain["data"]["attributes"]["total_votes"]["malicious"]
-                    av_result:dict = result_domain["data"]["attributes"]["last_analysis_results"]
-                    return ScanResult(
-                        "Detected" if negative > 0 else "Safe",
-                        True if negative > 0 else False,
-                        negative,
-                        positive,
-                        total,
-                        negative_votes,
-                        positive_votes,
-                        result_domain["data"]["attributes"]["tags"],
-                        av_result,
-                        result_domain["data"]["id"]
-                    )
+                    return self.jsonDataConverter(result_domain)
                 else:
                     return ScanResult(
                         "Not found",

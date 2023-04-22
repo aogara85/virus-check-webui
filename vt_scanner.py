@@ -71,7 +71,9 @@ class VtScanner:
         返り値はタプル、(存在有無をbool、存在した場合のフルパス)
         '''
         for file in self.get_file_list()[type]:
-            scanresult = self.jsonDataConverter(file)
+            with open(file,'r') as f:
+                jsondata = json.load(f)
+                scanresult = self.jsonDataConverter(jsondata)
             if id == scanresult.id:
                 return (True,file)
             else:
@@ -79,35 +81,34 @@ class VtScanner:
         return (False,"")
   
     
-    def jsonDataConverter(self,json_data)->ScanResult:
+    def jsonDataConverter(self,jsondata)->ScanResult:
         '''
         読み込んだjsonファイルをScanResultにパースして返す。
         '''
-        with open(json_data, "r") as f:
-            jsondata = json.load(f)
-            negative = jsondata["data"]["attributes"]["last_analysis_stats"]["malicious"]
-            + jsondata["data"]["attributes"]["last_analysis_stats"]["suspicious"]
-            positive = jsondata["data"]["attributes"]["last_analysis_stats"]["harmless"]
-            + jsondata["data"]["attributes"]["last_analysis_stats"]["undetected"]
-            if jsondata["data"]["type"] == "file":
-                total = jsondata["data"]["attributes"]["last_analysis_stats"]["type-unsupported"] + negative + positive
-            else:
-                total = jsondata["data"]["attributes"]["last_analysis_stats"]["undetected"] + negative + positive
-            positive_votes:int = jsondata["data"]["attributes"]["total_votes"]["harmless"]
-            negative_votes:int = jsondata["data"]["attributes"]["total_votes"]["malicious"]
-            av_result:dict = jsondata["data"]["attributes"]["last_analysis_results"]
-            return ScanResult(
-                "Detected" if negative > 0 else "Safe",
-                True if negative > 0 else False,
-                negative,
-                positive,
-                total,
-                negative_votes,
-                positive_votes,
-                jsondata["data"]["attributes"]["tags"],
-                av_result,
-                jsondata["data"]["id"]
-            )
+        #jsondata = json.load(json_obj)
+        negative = jsondata["data"]["attributes"]["last_analysis_stats"]["malicious"]
+        + jsondata["data"]["attributes"]["last_analysis_stats"]["suspicious"]
+        positive = jsondata["data"]["attributes"]["last_analysis_stats"]["harmless"]
+        + jsondata["data"]["attributes"]["last_analysis_stats"]["undetected"]
+        if jsondata["data"]["type"] == "file":
+            total = jsondata["data"]["attributes"]["last_analysis_stats"]["type-unsupported"] + negative + positive
+        else:
+            total = jsondata["data"]["attributes"]["last_analysis_stats"]["undetected"] + negative + positive
+        positive_votes:int = jsondata["data"]["attributes"]["total_votes"]["harmless"]
+        negative_votes:int = jsondata["data"]["attributes"]["total_votes"]["malicious"]
+        av_result:dict = jsondata["data"]["attributes"]["last_analysis_results"]
+        return ScanResult(
+            "Detected" if negative > 0 else "Safe",
+            True if negative > 0 else False,
+            negative,
+            positive,
+            total,
+            negative_votes,
+            positive_votes,
+            jsondata["data"]["attributes"]["tags"],
+            av_result,
+            jsondata["data"]["id"]
+        )
         
     def hashScanner(self,apikey:str,filename:str,hash:str,overwrite:bool)->ScanResult:
         '''
@@ -122,7 +123,9 @@ class VtScanner:
         output_filename = f"{HASH_SCAN_DATA_PATH}/{filename}.json"
         #既にスキャン済ファイルであれば、jsonファイルから読み出す。
         if report_check[0] :
-            return self.jsonDataConverter(report_check[1])
+            with open(report_check[1],'r') as f:
+                jsondata = json.load(f)
+                return self.jsonDataConverter(jsondata)
         else:
             # URL for the VirusTotal API
             url_files = f"{self.base_url}/files/{hash}"
@@ -187,7 +190,9 @@ class VtScanner:
             #既にスキャン済のファイルが存在するかのチェック
             report_exist = self.check_id(url_sha256,2)
             if report_exist[0]:
-                return self.jsonDataConverter(report_exist[1])
+                with open(report_exist[1],'r') as f:
+                    jsondata = json.load(f)                    
+                    return self.jsonDataConverter(jsondata)
             else:
                 output_filename = f"{URL_SCAN_DATA_PATH}/{url_sha256}.json"
                 # Virustotal APIを使用して、URLの情報を取得する
@@ -234,7 +239,9 @@ class VtScanner:
             #既にスキャン済のファイルが存在するかのチェック
             report_exist = self.check_id(ip_url,3)
             if report_exist[0]:
-                return self.jsonDataConverter(report_exist[1])
+                with open(report_exist[1],'r') as f:
+                    jsondata = json.load(f)
+                    return self.jsonDataConverter(jsondata)
             else:
                 output_filename = f"{IP_SCAN_DATA_PATH}/{ip_url}.json"
                 ip_response = requests.get(self.base_url + "/ip_addresses/" + ip_url, headers=headers)
@@ -280,7 +287,9 @@ class VtScanner:
             #既にスキャン済のファイルが存在するかのチェック
             report_exist = self.check_id(ip_url,4)
             if report_exist[0]:
-                return self.jsonDataConverter(report_exist[1])
+                with open(report_exist[1],'r') as f:
+                    jsondata = json.load(f)                    
+                    return self.jsonDataConverter(jsondata)
             else:
                 output_filename = f"{DOMAIN_SCAN_DATA_PATH}/{ip_url}.json"
                 domain_response = requests.get(self.base_url + "/domains/" + ip_url, headers=headers)

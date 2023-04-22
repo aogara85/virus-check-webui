@@ -34,6 +34,8 @@ def highlight_not_none(val):
     elif val =="suspicious" or val == "spam":
         return 'color : orange'
     elif val == "phishing":
+        return "background-color: yellow"
+    elif val == "malware":
         return "background-color: red"
     else:
         return ""
@@ -108,7 +110,7 @@ def filehash_scan_page():
             pass
 
 def url_scan_page():
-    st.title("URL scan")
+    st.title("DOMAIN / URL / IP Scan")
     api_key = st.text_input('USE APIKEY','')
     st.write('APYKEY is ',api_key)
     ips_urls = st.text_area("スキャンするIP、URLを入力してください。", "")
@@ -120,13 +122,29 @@ def url_scan_page():
             for ip_url in ips_urls_list:
                 result = scanner.ip_UrlScanner(api_key,ip_url.strip())
                 result_dict[ip_url.strip()] = [result.result_str,result.negative,result.positive_votes,result.negative_votes]
+        st.markdown('''
+        - Result        :アンチウイルスソフトによる結果
+        - Negative Score:アンチウイルスソフトの検知数
+        - +votes        :コミュニティのポジティブな投票
+        - -votes        :コミュニティのネガティブな投票
+        ''')
         df = pd.DataFrame.from_dict(result_dict, orient='index', columns=['Result','Negative Score','+votes','-votes'])
         df.index.name = 'Target'
         st.write(df.style.applymap(vtScannerResultvView))
+        #円グラフを描画
+        labels = ["Detected", "Not found", "Safe"]
+        label_color = ['#FF0000','#D6C6AF','#228B22']
+        values = [(df == 'Detected').values.sum(), (df == 'Not found').values.sum(), (df == 'Safe').values.sum()]
+        fig, ax = plt.subplots()
+        ax.pie(values,colors=label_color ,labels=labels, autopct='%1.1f%%',textprops={'color': 'white'})
+        ax.axis("equal")
+        fig.set_facecolor('none')
+        st.pyplot(fig)
+
 
 def result_viewer():
     st.title("Result Viewer")
-    options = ["FileScan", "URLScan", "IPScan"]
+    options = ["FileScan", "URLScan", "IPScan","DOMAINScan"]
     selected_option = st.radio("Choose an option", options)
     st.markdown(
         '''
@@ -173,12 +191,25 @@ def result_viewer():
             with tab2:
                 with open(choice_result_viewer_file, "r") as f:
                     json_data = json.load(f)            
-                st.write(json_data)     
+                st.write(json_data)
+    elif selected_option == "DOMAINScan":
+        choice_result_viewer_file = st.selectbox("Select data",sorted(file_path_list[4],key=len))
+        if choice_result_viewer_file:
+            tab1, tab2 = st.tabs(["AV scans", "raw Data"])
+            with tab1:
+                read_result:ScanResult = scanner.jsonDataConverter(choice_result_viewer_file)
+                df = pd.DataFrame.from_dict(read_result.scans).T
+                styled_df = df.style.applymap(highlight_not_none, subset=["category","result"])
+                st.dataframe(styled_df)
+            with tab2:
+                with open(choice_result_viewer_file, "r") as f:
+                    json_data = json.load(f)            
+                st.write(json_data)
 
 def main():
     # サイドバーの設定
     st.sidebar.header("Menu")
-    menu = ["File scan", "URL scan","result Viewer"]
+    menu = ["File scan", "DOMAIN / URL / IP Scan","result Viewer"]
     default_choice = menu[0]  # デフォルトで選択されるページ
     choice = st.sidebar.selectbox("Select a page", menu, index=menu.index(default_choice))
     if st.sidebar.button('アプリを終了する'):
@@ -189,7 +220,7 @@ def main():
 
     if choice == "File scan":
         filehash_scan_page()
-    elif choice == "URL scan":
+    elif choice == "DOMAIN / URL / IP Scan":
         url_scan_page()
     elif choice == "result Viewer":
         result_viewer()

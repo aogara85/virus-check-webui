@@ -1,6 +1,6 @@
 import json
 import hashlib
-import base64
+import re
 import sqlite3
 import requests
 import os
@@ -12,6 +12,7 @@ DATA_FOLDER_ROOT_PATH = ".\\data"
 HASH_SCAN_DATA_PATH = ".\\data\\hashscan"
 URL_SCAN_DATA_PATH = ".\\data\\urlscan"
 IP_SCAN_DATA_PATH = ".\\data\\ipscan"
+DOMAIN_SCAN_DATA_PATH = ".\\data\\domainscan"
 
 @dataclass
 class ScanResult:
@@ -38,6 +39,7 @@ class VtScanner:
             os.mkdir(HASH_SCAN_DATA_PATH)
             os.mkdir(URL_SCAN_DATA_PATH)
             os.mkdir(IP_SCAN_DATA_PATH)
+            os.mkdir(DOMAIN_SCAN_DATA_PATH)
 
     def get_file_list(self)->tuple[list[str],list[str]]:
         '''
@@ -46,24 +48,31 @@ class VtScanner:
         file_fullpath_list = []
         file_fullpath_list_url = []
         file_fullpath_list_ip = []
+        file_fullpath_list_domain = []
         file_list = os.listdir(HASH_SCAN_DATA_PATH)
         file_list_url = os.listdir(URL_SCAN_DATA_PATH)
         file_list_ip = os.listdir(IP_SCAN_DATA_PATH)
+        file_list_domain = os.listdir(DOMAIN_SCAN_DATA_PATH)
         for filename in file_list:
             file_fullpath_list.append(os.path.join(HASH_SCAN_DATA_PATH,filename))
         for filename in file_list_url:
             file_fullpath_list_url.append(os.path.join(URL_SCAN_DATA_PATH,filename))
         for filename in file_list_ip:
             file_fullpath_list_ip.append(os.path.join(IP_SCAN_DATA_PATH,filename))
-        return (file_list,file_fullpath_list,file_fullpath_list_url,file_fullpath_list_ip)
+        for filename in file_list_domain:
+            file_fullpath_list_domain.append(os.path.join(DOMAIN_SCAN_DATA_PATH,filename))            
+        return (file_list,file_fullpath_list,file_fullpath_list_url,file_fullpath_list_ip,file_fullpath_list_domain)
 
-    def check_file_by_hash(self,hash_value)->tuple[bool,str]:
+    def check_id(self,id:str,type:int)->tuple[bool,str]:
         '''
-        スキャン結果のsha256が一致するファイルの存在をチェックする。
+        スキャン結果のidが一致するファイルの存在をチェックする。
+        ファイルやURLはsha256に、IPならIPになる。
+        type:1=file,2=url,3=ip,4=domain
+        返り値はタプル、(存在有無をbool、存在した場合のフルパス)
         '''
-        for file in self.get_file_list()[1]:
+        for file in self.get_file_list()[type]:
             scanresult = self.jsonDataConverter(file)
-            if hash_value == scanresult.id:
+            if id == scanresult.id:
                 return (True,file)
             else:
                 continue
@@ -106,7 +115,7 @@ class VtScanner:
         '''
         headers = {"x-apikey": apikey}
         #Check Report
-        report_check = self.check_file_by_hash(hash)
+        report_check = self.check_id(hash,1)
         #既にスキャン済ファイルがあったとしても上書き設定がONならcheckをオフに。
         if overwrite == True:
             report_check[0] = False
@@ -170,90 +179,149 @@ class VtScanner:
     def ip_UrlScanner(self,apikey:str,ip_url:str):
         headers = {"x-apikey": apikey}
         # URLかIPアドレスかを判別する
+        ip_pattern = r"^(([01]?[0-9]{1,2}|2[0-4][0-9]|25[0-5])\.){3}([01]?[0-9]{1,2}|2[0-4][0-9]|25[0-5])$"
+
         if ip_url.startswith("http") or ip_url.startswith("https"):
             # URLの場合、URLのSHA-256ハッシュ値を取得する
             url_sha256 = hashlib.sha256(ip_url.encode('utf-8')).hexdigest()
-            output_filename = f"{URL_SCAN_DATA_PATH}/{url_sha256}.json"
-            # Virustotal APIを使用して、URLの情報を取得する
-            url_response = requests.get(self.base_url + "/urls/" + url_sha256, headers=headers)
-            if url_response.status_code == 200:
-                result_url = url_response.json()
-                with open(output_filename, "w") as outfile:
-                    json.dump(result_url, outfile)                
-                negative = result_url["data"]["attributes"]["last_analysis_stats"]["malicious"]
-                + result_url["data"]["attributes"]["last_analysis_stats"]["suspicious"]
-                positive = result_url["data"]["attributes"]["last_analysis_stats"]["harmless"]
-                + result_url["data"]["attributes"]["last_analysis_stats"]["undetected"]
-                total = result_url["data"]["attributes"]["last_analysis_stats"]["undetected"] + negative + positive
-                positive_votes:int = result_url["data"]["attributes"]["total_votes"]["harmless"]
-                negative_votes:int = result_url["data"]["attributes"]["total_votes"]["malicious"]
-                av_result:dict = result_url["data"]["attributes"]["last_analysis_results"]
-                return ScanResult(
-                    "Detected" if negative > 0 else "Safe",
-                    True if negative > 0 else False,
-                    negative,
-                    positive,
-                    total,
-                    negative_votes,
-                    positive_votes,
-                    result_url["data"]["attributes"]["tags"],
-                    av_result,
-                    result_url["data"]["id"]
-                )
+            #既にスキャン済のファイルが存在するかのチェック
+            report_exist = self.check_id(url_sha256,2)
+            if report_exist[0]:
+                return self.jsonDataConverter(report_exist[1])
             else:
-                return ScanResult(
-                    "Not found",
-                    False,
-                    -1,
-                    -1,
-                    -1,
-                    -1,
-                    -1,
-                    [],
-                    {},
-                    ""
-                )
-        else:
+                output_filename = f"{URL_SCAN_DATA_PATH}/{url_sha256}.json"
+                # Virustotal APIを使用して、URLの情報を取得する
+                url_response = requests.get(self.base_url + "/urls/" + url_sha256, headers=headers)
+                if url_response.status_code == 200:
+                    result_url = url_response.json()
+                    with open(output_filename, "w") as outfile:
+                        json.dump(result_url, outfile)                
+                    negative = result_url["data"]["attributes"]["last_analysis_stats"]["malicious"]
+                    + result_url["data"]["attributes"]["last_analysis_stats"]["suspicious"]
+                    positive = result_url["data"]["attributes"]["last_analysis_stats"]["harmless"]
+                    + result_url["data"]["attributes"]["last_analysis_stats"]["undetected"]
+                    total = result_url["data"]["attributes"]["last_analysis_stats"]["undetected"] + negative + positive
+                    positive_votes:int = result_url["data"]["attributes"]["total_votes"]["harmless"]
+                    negative_votes:int = result_url["data"]["attributes"]["total_votes"]["malicious"]
+                    av_result:dict = result_url["data"]["attributes"]["last_analysis_results"]
+                    return ScanResult(
+                        "Detected" if negative > 0 else "Safe",
+                        True if negative > 0 else False,
+                        negative,
+                        positive,
+                        total,
+                        negative_votes,
+                        positive_votes,
+                        result_url["data"]["attributes"]["tags"],
+                        av_result,
+                        result_url["data"]["id"]
+                    )
+                else:
+                    return ScanResult(
+                        "Not found",
+                        False,
+                        -1,
+                        -1,
+                        -1,
+                        -1,
+                        -1,
+                        [],
+                        {},
+                        ""
+                    )
+        elif re.match(ip_pattern,ip_url):
             # IPアドレスの場合、IPアドレスの情報を取得する
-            output_filename = f"{IP_SCAN_DATA_PATH}/{ip_url}.json"
-            ip_response = requests.get(self.base_url + "/ip_addresses/" + ip_url, headers=headers)
-            if ip_response.status_code == 200:
-                result_ip = ip_response.json()                
-                with open(output_filename, "w") as outfile:
-                    json.dump(result_ip, outfile)                 
-                negative = result_ip["data"]["attributes"]["last_analysis_stats"]["malicious"]
-                + result_ip["data"]["attributes"]["last_analysis_stats"]["suspicious"]
-                positive = result_ip["data"]["attributes"]["last_analysis_stats"]["harmless"]
-                + result_ip["data"]["attributes"]["last_analysis_stats"]["undetected"]
-                total = result_ip["data"]["attributes"]["last_analysis_stats"]["undetected"] + negative + positive
-                positive_votes:int = result_ip["data"]["attributes"]["total_votes"]["harmless"]
-                negative_votes:int = result_ip["data"]["attributes"]["total_votes"]["malicious"]
-                av_result:dict = result_ip["data"]["attributes"]["last_analysis_results"]
-                return ScanResult(
-                    "Detected" if negative > 0 else "Safe",
-                    True if negative > 0 else False,
-                    negative,
-                    positive,
-                    total,
-                    negative_votes,
-                    positive_votes,
-                    result_ip["data"]["attributes"]["tags"],
-                    av_result,
-                    result_ip["data"]["id"]
-                )
+            #既にスキャン済のファイルが存在するかのチェック
+            report_exist = self.check_id(ip_url,3)
+            if report_exist[0]:
+                return self.jsonDataConverter(report_exist[1])
             else:
-                return ScanResult(
-                    "Not found",
-                    False,
-                    -1,
-                    -1,
-                    -1,
-                    -1,
-                    -1,
-                    [],
-                    {},
-                    ""
-                )
+                output_filename = f"{IP_SCAN_DATA_PATH}/{ip_url}.json"
+                ip_response = requests.get(self.base_url + "/ip_addresses/" + ip_url, headers=headers)
+                if ip_response.status_code == 200:
+                    result_ip = ip_response.json()                
+                    with open(output_filename, "w") as outfile:
+                        json.dump(result_ip, outfile)                 
+                    negative = result_ip["data"]["attributes"]["last_analysis_stats"]["malicious"]
+                    + result_ip["data"]["attributes"]["last_analysis_stats"]["suspicious"]
+                    positive = result_ip["data"]["attributes"]["last_analysis_stats"]["harmless"]
+                    + result_ip["data"]["attributes"]["last_analysis_stats"]["undetected"]
+                    total = result_ip["data"]["attributes"]["last_analysis_stats"]["undetected"] + negative + positive
+                    positive_votes:int = result_ip["data"]["attributes"]["total_votes"]["harmless"]
+                    negative_votes:int = result_ip["data"]["attributes"]["total_votes"]["malicious"]
+                    av_result:dict = result_ip["data"]["attributes"]["last_analysis_results"]
+                    return ScanResult(
+                        "Detected" if negative > 0 else "Safe",
+                        True if negative > 0 else False,
+                        negative,
+                        positive,
+                        total,
+                        negative_votes,
+                        positive_votes,
+                        result_ip["data"]["attributes"]["tags"],
+                        av_result,
+                        result_ip["data"]["id"]
+                    )
+                else:
+                    return ScanResult(
+                        "Not found",
+                        False,
+                        -1,
+                        -1,
+                        -1,
+                        -1,
+                        -1,
+                        [],
+                        {},
+                        ""
+                    )
+        else:
+            #ドメインの場合
+            #既にスキャン済のファイルが存在するかのチェック
+            report_exist = self.check_id(ip_url,4)
+            if report_exist[0]:
+                return self.jsonDataConverter(report_exist[1])
+            else:
+                output_filename = f"{DOMAIN_SCAN_DATA_PATH}/{ip_url}.json"
+                domain_response = requests.get(self.base_url + "/domains/" + ip_url, headers=headers)
+                if domain_response.status_code == 200:
+                    result_domain = domain_response.json()                
+                    with open(output_filename, "w") as outfile:
+                        json.dump(result_domain, outfile)                 
+                    negative = result_domain["data"]["attributes"]["last_analysis_stats"]["malicious"]
+                    + result_domain["data"]["attributes"]["last_analysis_stats"]["suspicious"]
+                    positive = result_domain["data"]["attributes"]["last_analysis_stats"]["harmless"]
+                    + result_domain["data"]["attributes"]["last_analysis_stats"]["undetected"]
+                    total = result_domain["data"]["attributes"]["last_analysis_stats"]["undetected"] + negative + positive
+                    positive_votes:int = result_domain["data"]["attributes"]["total_votes"]["harmless"]
+                    negative_votes:int = result_domain["data"]["attributes"]["total_votes"]["malicious"]
+                    av_result:dict = result_domain["data"]["attributes"]["last_analysis_results"]
+                    return ScanResult(
+                        "Detected" if negative > 0 else "Safe",
+                        True if negative > 0 else False,
+                        negative,
+                        positive,
+                        total,
+                        negative_votes,
+                        positive_votes,
+                        result_domain["data"]["attributes"]["tags"],
+                        av_result,
+                        result_domain["data"]["id"]
+                    )
+                else:
+                    return ScanResult(
+                        "Not found",
+                        False,
+                        -1,
+                        -1,
+                        -1,
+                        -1,
+                        -1,
+                        [],
+                        {},
+                        ""
+                    )
+
                 
     def chromeHistoryExtractor(self):
         # Chromeの履歴データベースのパスを取得

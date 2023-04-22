@@ -21,6 +21,7 @@ class ScanResult:
     '''
     result_str:str
     detected: bool
+    categories:dict     #domain,URLのみ
     negative:int
     positive: int
     total:int
@@ -29,6 +30,7 @@ class ScanResult:
     tags: list
     scans: dict
     id:str
+    whois:str           #domain,IPのみ
 
 class VtScanner:
     def __init__(self):
@@ -81,34 +83,64 @@ class VtScanner:
         return (False,"")
   
     
-    def jsonDataConverter(self,jsondata)->ScanResult:
+    def jsonDataConverter(self,jsondata:dict)->ScanResult:
         '''
         読み込んだjsonファイルをScanResultにパースして返す。
         '''
-        negative = jsondata["data"]["attributes"]["last_analysis_stats"]["malicious"]
-        + jsondata["data"]["attributes"]["last_analysis_stats"]["suspicious"]
-        positive = jsondata["data"]["attributes"]["last_analysis_stats"]["harmless"]
-        + jsondata["data"]["attributes"]["last_analysis_stats"]["undetected"]
-        if jsondata["data"]["type"] == "file":
-            total = jsondata["data"]["attributes"]["last_analysis_stats"]["type-unsupported"] + negative + positive
+        if jsondata:
+            negative = jsondata["data"]["attributes"]["last_analysis_stats"]["malicious"]
+            + jsondata["data"]["attributes"]["last_analysis_stats"]["suspicious"]
+            positive = jsondata["data"]["attributes"]["last_analysis_stats"]["harmless"]
+            + jsondata["data"]["attributes"]["last_analysis_stats"]["undetected"]
+            if jsondata["data"]["type"] == "file":
+                categories = {}
+                total = jsondata["data"]["attributes"]["last_analysis_stats"]["type-unsupported"] + negative + positive
+                whois = ""
+            elif jsondata["data"]["type"] == "domain":
+                categories = jsondata["data"]["attributes"]["categories"]
+                total = jsondata["data"]["attributes"]["last_analysis_stats"]["undetected"] + negative + positive
+                whois = jsondata["data"]["attributes"]["whois"]
+            elif jsondata["data"]["type"] == "url":
+                categories = jsondata["data"]["attributes"]["categories"]
+                total = jsondata["data"]["attributes"]["last_analysis_stats"]["undetected"] + negative + positive
+                whois = ""
+            else:
+                categories = {}
+                total = jsondata["data"]["attributes"]["last_analysis_stats"]["undetected"] + negative + positive
+                whois = jsondata["data"]["attributes"]["whois"]
+            positive_votes:int = jsondata["data"]["attributes"]["total_votes"]["harmless"]
+            negative_votes:int = jsondata["data"]["attributes"]["total_votes"]["malicious"]
+            av_result:dict = jsondata["data"]["attributes"]["last_analysis_results"]
+            return ScanResult(
+                "Detected" if negative > 0 else "Safe",
+                True if negative > 0 else False,
+                categories,
+                negative,
+                positive,
+                total,
+                negative_votes,
+                positive_votes,
+                jsondata["data"]["attributes"]["tags"],
+                av_result,
+                jsondata["data"]["id"],
+                whois
+            )
         else:
-            total = jsondata["data"]["attributes"]["last_analysis_stats"]["undetected"] + negative + positive
-        positive_votes:int = jsondata["data"]["attributes"]["total_votes"]["harmless"]
-        negative_votes:int = jsondata["data"]["attributes"]["total_votes"]["malicious"]
-        av_result:dict = jsondata["data"]["attributes"]["last_analysis_results"]
-        return ScanResult(
-            "Detected" if negative > 0 else "Safe",
-            True if negative > 0 else False,
-            negative,
-            positive,
-            total,
-            negative_votes,
-            positive_votes,
-            jsondata["data"]["attributes"]["tags"],
-            av_result,
-            jsondata["data"]["id"]
-        )
-        
+            return ScanResult(
+                "Not found",
+                False,
+                {},
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                [],
+                {},
+                "",
+                ""
+            )
+
     def hashScanner(self,apikey:str,filename:str,hash:str,overwrite:bool)->ScanResult:
         '''
         SHA256hashをIDとしたレポートを取得する。endpointはfile/{id}のみ
@@ -144,18 +176,7 @@ class VtScanner:
                     json.dump(result, outfile)
                 return self.jsonDataConverter(result)
             else:
-                return ScanResult(
-                    "Not found",
-                    False,
-                    -1,
-                    -1,
-                    -1,
-                    -1,
-                    -1,
-                    [],
-                    {},
-                    ""
-                )
+                return self.jsonDataConverter({})
 
     def ip_UrlScanner(self,apikey:str,ip_url:str):
         headers = {"x-apikey": apikey}
@@ -181,18 +202,7 @@ class VtScanner:
                         json.dump(result_url, outfile)                
                     return self.jsonDataConverter(result_url)
                 else:
-                    return ScanResult(
-                        "Not found",
-                        False,
-                        -1,
-                        -1,
-                        -1,
-                        -1,
-                        -1,
-                        [],
-                        {},
-                        ""
-                    )
+                    return self.jsonDataConverter({})
         elif re.match(ip_pattern,ip_url):
             # IPアドレスの場合、IPアドレスの情報を取得する
             #既にスキャン済のファイルが存在するかのチェック
@@ -210,18 +220,7 @@ class VtScanner:
                         json.dump(result_ip, outfile)                 
                     return self.jsonDataConverter(result_ip)
                 else:
-                    return ScanResult(
-                        "Not found",
-                        False,
-                        -1,
-                        -1,
-                        -1,
-                        -1,
-                        -1,
-                        [],
-                        {},
-                        ""
-                    )
+                    return self.jsonDataConverter({})
         else:
             #ドメインの場合
             #既にスキャン済のファイルが存在するかのチェック
@@ -239,18 +238,7 @@ class VtScanner:
                         json.dump(result_domain, outfile)                 
                     return self.jsonDataConverter(result_domain)
                 else:
-                    return ScanResult(
-                        "Not found",
-                        False,
-                        -1,
-                        -1,
-                        -1,
-                        -1,
-                        -1,
-                        [],
-                        {},
-                        ""
-                    )
+                    return self.jsonDataConverter({})
 
                 
     def chromeHistoryExtractor(self):

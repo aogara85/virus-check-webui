@@ -158,7 +158,9 @@ def result_viewer():
         if choice_result_viewer_file:
             tab1, tab2 = st.tabs(["AV scans", "raw Data"])
             with tab1:
-                read_result:ScanResult = scanner.jsonDataConverter(choice_result_viewer_file)
+                with open(choice_result_viewer_file,'r') as f:
+                    jsondata = json.load(f)                
+                    read_result = scanner.jsonDataConverter(jsondata)
                 df = pd.DataFrame.from_dict(read_result.scans).T
                 styled_df = df.style.applymap(highlight_not_none, subset=["category","result"])
                 st.dataframe(styled_df)
@@ -171,20 +173,24 @@ def result_viewer():
         if choice_result_viewer_file:
             tab1, tab2 = st.tabs(["AV scans", "raw Data"])
             with tab1:
-                read_result:ScanResult = scanner.jsonDataConverter(choice_result_viewer_file)
+                with open(choice_result_viewer_file,'r') as f:
+                    jsondata = json.load(f)                
+                    read_result = scanner.jsonDataConverter(jsondata)
                 df = pd.DataFrame.from_dict(read_result.scans).T
                 styled_df = df.style.applymap(highlight_not_none, subset=["category","result"])
                 st.dataframe(styled_df)
             with tab2:
                 with open(choice_result_viewer_file, "r") as f:
-                    json_data = json.load(f)            
+                    json_data = json.load(f)
                 st.write(json_data)
     elif selected_option == "IPScan":
         choice_result_viewer_file = st.selectbox("Select data",sorted(file_path_list[3],key=len))
         if choice_result_viewer_file:
             tab1, tab2 = st.tabs(["AV scans", "raw Data"])
             with tab1:
-                read_result:ScanResult = scanner.jsonDataConverter(choice_result_viewer_file)
+                with open(choice_result_viewer_file,'r') as f:
+                    jsondata = json.load(f)                
+                    read_result = scanner.jsonDataConverter(jsondata)
                 df = pd.DataFrame.from_dict(read_result.scans).T
                 styled_df = df.style.applymap(highlight_not_none, subset=["category","result"])
                 st.dataframe(styled_df)
@@ -197,7 +203,9 @@ def result_viewer():
         if choice_result_viewer_file:
             tab1, tab2 = st.tabs(["AV scans", "raw Data"])
             with tab1:
-                read_result:ScanResult = scanner.jsonDataConverter(choice_result_viewer_file)
+                with open(choice_result_viewer_file,'r') as f:
+                    jsondata = json.load(f)                
+                    read_result = scanner.jsonDataConverter(jsondata)
                 df = pd.DataFrame.from_dict(read_result.scans).T
                 styled_df = df.style.applymap(highlight_not_none, subset=["category","result"])
                 st.dataframe(styled_df)

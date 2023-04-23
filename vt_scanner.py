@@ -22,6 +22,7 @@ class ScanResult:
     result_str:str
     detected: bool
     categories:dict     #domain,URLのみ
+    country:str
     negative:int
     positive: int
     total:int
@@ -94,18 +95,22 @@ class VtScanner:
             + jsondata["data"]["attributes"]["last_analysis_stats"]["undetected"]
             if jsondata["data"]["type"] == "file":
                 categories = {}
+                country = "-"
                 total = jsondata["data"]["attributes"]["last_analysis_stats"]["type-unsupported"] + negative + positive
                 whois = ""
             elif jsondata["data"]["type"] == "domain":
                 categories = jsondata["data"]["attributes"]["categories"]
+                country = "-"
                 total = jsondata["data"]["attributes"]["last_analysis_stats"]["undetected"] + negative + positive
                 whois = jsondata["data"]["attributes"]["whois"]
             elif jsondata["data"]["type"] == "url":
                 categories = jsondata["data"]["attributes"]["categories"]
+                country = "-"
                 total = jsondata["data"]["attributes"]["last_analysis_stats"]["undetected"] + negative + positive
                 whois = ""
             else:
                 categories = {}
+                country = jsondata["data"]["attributes"]["country"]
                 total = jsondata["data"]["attributes"]["last_analysis_stats"]["undetected"] + negative + positive
                 whois = jsondata["data"]["attributes"]["whois"]
             positive_votes:int = jsondata["data"]["attributes"]["total_votes"]["harmless"]
@@ -115,6 +120,7 @@ class VtScanner:
                 "Detected" if negative > 0 else "Safe",
                 True if negative > 0 else False,
                 categories,
+                country,
                 negative,
                 positive,
                 total,
@@ -130,6 +136,7 @@ class VtScanner:
                 "Not found",
                 False,
                 {},
+                "-",
                 -1,
                 -1,
                 -1,

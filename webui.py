@@ -121,14 +121,14 @@ def url_scan_page():
         if ips_urls_list:
             for ip_url in ips_urls_list:
                 result = scanner.ip_UrlScanner(api_key,ip_url.strip())
-                result_dict[ip_url.strip()] = [result.result_str,result.negative,result.positive_votes,result.negative_votes]
+                result_dict[ip_url.strip()] = [result.result_str,result.negative,result.positive_votes,result.negative_votes,result.country]
         st.markdown('''
         - Result        :アンチウイルスソフトによる結果
         - Negative Score:アンチウイルスソフトの検知数
         - +votes        :コミュニティのポジティブな投票
         - -votes        :コミュニティのネガティブな投票
         ''')
-        df = pd.DataFrame.from_dict(result_dict, orient='index', columns=['Result','Negative Score','+votes','-votes'])
+        df = pd.DataFrame.from_dict(result_dict, orient='index', columns=['Result','Negative Score','+votes','-votes','country'])
         df.index.name = 'Target'
         st.write(df.style.applymap(vtScannerResultvView))
         #円グラフを描画

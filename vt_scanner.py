@@ -112,7 +112,10 @@ class VtScanner:
                 categories = {}
                 country = jsondata["data"]["attributes"]["country"]
                 total = jsondata["data"]["attributes"]["last_analysis_stats"]["undetected"] + negative + positive
-                whois = jsondata["data"]["attributes"]["whois"]
+                try:
+                    whois = jsondata["data"]["attributes"]["whois"]
+                except:
+                    whois = "No Data"
             positive_votes:int = jsondata["data"]["attributes"]["total_votes"]["harmless"]
             negative_votes:int = jsondata["data"]["attributes"]["total_votes"]["malicious"]
             av_result:dict = jsondata["data"]["attributes"]["last_analysis_results"]
@@ -188,7 +191,7 @@ class VtScanner:
     def ip_UrlScanner(self,apikey:str,ip_url:str):
         headers = {"x-apikey": apikey}
         # URLかIPアドレスかを判別する
-        ip_pattern = r"^(([01]?[0-9]{1,2}|2[0-4][0-9]|25[0-5])\.){3}([01]?[0-9]{1,2}|2[0-4][0-9]|25[0-5])$"
+        ip_pattern = r"^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$"
 
         if ip_url.startswith("http") or ip_url.startswith("https"):
             # URLの場合、URLのSHA-256ハッシュ値を取得する

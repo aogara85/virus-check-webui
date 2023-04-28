@@ -113,7 +113,7 @@ def url_scan_page():
     st.title("DOMAIN / URL / IP Scan")
     api_key = st.text_input('USE APIKEY','')
     st.write('APYKEY is ',api_key)
-    ips_urls = st.text_area("スキャンするIP、URLを入力してください。", "")
+    ips_urls = st.text_area("スキャンするDOMAIN、IP、URL、Hash値を入力してください。", "")
     if st.button('Scan Start'):
         ips_urls_list =ips_urls.split("\n")
         scanner = VtScanner()

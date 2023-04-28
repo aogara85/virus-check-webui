@@ -192,7 +192,10 @@ class VtScanner:
         headers = {"x-apikey": apikey}
         # URLかIPアドレスかを判別する
         ip_pattern = r"^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$"
-
+        md5_pattern = r"^[a-fA-F0-9]{32}$"
+        sha1_pattern = r"^[a-fA-F0-9]{40}$"
+        sha256_pattern = r"^[a-fA-F0-9]{64}$"
+        hostname_pattern = r"^(?!:\/\/)(?![0-9]+$)(?!-)[a-zA-Z0-9-]{1,63}(?<!-)(\.[a-zA-Z0-9-]{1,63})*$"
         if ip_url.startswith("http") or ip_url.startswith("https"):
             # URLの場合、URLのSHA-256ハッシュ値を取得する
             url_sha256 = hashlib.sha256(ip_url.encode('utf-8')).hexdigest()
@@ -231,7 +234,7 @@ class VtScanner:
                     return self.jsonDataConverter(result_ip)
                 else:
                     return self.jsonDataConverter({})
-        else:
+        elif re.match(hostname_pattern,ip_url):
             #ドメインの場合
             #既にスキャン済のファイルが存在するかのチェック
             report_exist = self.check_id(ip_url,4)
@@ -249,8 +252,14 @@ class VtScanner:
                     return self.jsonDataConverter(result_domain)
                 else:
                     return self.jsonDataConverter({})
+        elif re.match(md5_pattern,ip_url) and re.match(sha1_pattern,ip_url) and re.match(sha256_pattern,ip_url):
+            #Hash値の場合
+            return self.hashScanner(apikey,ip_url,ip_url,False)
+        
+        else:
+            #該当しない文字列の場合は、空の辞書を与える
+            return self.jsonDataConverter({})
 
-                
     def chromeHistoryExtractor(self):
         # Chromeの履歴データベースのパスを取得
         #r'\\AppData\\Local\\Google\\Chrome\\User Data\\Default'

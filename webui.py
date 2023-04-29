@@ -44,13 +44,7 @@ def highlight_not_none(val):
 
 def filehash_scan_page():
     st.title("FileHashscan")
-    api_key = ""
-    if st.button("read config file"):
-        try:
-            with open("config","r") as f:
-                api_key = f.read()
-        except:
-            st.write('Please set APIKEY!')
+    api_key = st.text_input('set APIKEY','')
     st.write('APYKEY is ',api_key) 
     exist_file_not_scan = st.radio("既にスキャンしたファイルの処理を選んでください", ["結果を再表示", "スキャン結果を上書きする"])
     overwrite =False
@@ -117,15 +111,8 @@ def filehash_scan_page():
 
 def url_scan_page():
     st.title("DOMAIN / URL / IP Scan")
-    api_key = ""
-    if st.button("read config file"):
-        try:
-            with open("config","r") as f:
-                api_key = f.read()
-        except:
-            st.write('Please set APIKEY!')
+    api_key = st.text_input('set APIKEY','')
     st.write('APYKEY is ',api_key)
-
     ips_urls = st.text_area("スキャンするDOMAIN、IP、URL、Hash値を入力してください。", "")
     if st.button('Scan Start'):
         ips_urls_list =ips_urls.split("\n")
@@ -235,19 +222,19 @@ def result_viewer():
                 with open(choice_result_viewer_file, "r") as f:
                     json_data = json.load(f)            
                 st.write(json_data)
-
+                
 def main():
     # サイドバーの設定
     st.sidebar.header("Menu")
     menu = ["File scan", "DOMAIN / URL / IP Scan","result Viewer"]
     default_choice = menu[0]  # デフォルトで選択されるページ
     choice = st.sidebar.selectbox("Select a page", menu, index=menu.index(default_choice))
-    api_key = st.sidebar.text_input('set APIKEY','')
-    if st.sidebar.button('Save APIKEY in a config file'):
-        sha256_pattern = r"^[a-fA-F0-9]{64}$"
-        if re.match(sha256_pattern,api_key):
-            with open("config","w") as f:
-                f.write(api_key)
+    # api_key = st.sidebar.text_input('set APIKEY','')
+    # if st.sidebar.button('Save APIKEY in a config file'):
+    #     sha256_pattern = r"^[a-fA-F0-9]{64}$"
+    #     if re.match(sha256_pattern,api_key):
+    #         with open("config","w") as f:
+    #             f.write(api_key)
 
     # 選択されたページの実行
 

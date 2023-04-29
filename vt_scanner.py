@@ -190,7 +190,7 @@ class VtScanner:
             else:
                 return self.jsonDataConverter({})
 
-    def ip_UrlScanner(self,apikey:str,ip_url:str):
+    def ip_UrlScanner(self,apikey:str,ip_url:str)->ScanResult:
         headers = {"x-apikey": apikey}
         # URLかIPアドレスかを判別する
         ip_pattern = r"^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$"
@@ -231,6 +231,7 @@ class VtScanner:
             else:
                 output_filename = f"{IP_SCAN_DATA_PATH}/{ip_url}.json"
                 ip_response = requests.get(self.base_url + "/ip_addresses/" + ip_url, headers=headers)
+                print(ip_response.status_code)
                 if ip_response.status_code == 200:
                     result_ip = ip_response.json()
                     #コメントを付与

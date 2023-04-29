@@ -119,16 +119,25 @@ def url_scan_page():
         scanner = VtScanner()
         result_dict = {}
         if ips_urls_list:
+            #プログレスバーをサイドバーに表示
+            progress_bar = st.sidebar.progress(0)
+            status_text = st.sidebar.empty()
+            n = 1
             for ip_url in ips_urls_list:
                 result = scanner.ip_UrlScanner(api_key,ip_url.strip())
-                result_dict[ip_url.strip()] = [result.result_str,result.negative,result.positive_votes,result.negative_votes,result.country]
+                result_dict[ip_url.strip()] = [result.result_str,result.negative,result.positive_votes,result.negative_votes,result.country,result.tags,result.categories]
+                progress_bar.progress(n / len(ips_urls_list))
+                status_text.text(f"処理中... {n * 100 // len(ips_urls_list)}%")
+                n += 1
+                time.sleep(0.1)
+            status_text.text("完了")                    
         st.markdown('''
         - Result        :アンチウイルスソフトによる結果
         - Negative Score:アンチウイルスソフトの検知数
         - +votes        :コミュニティのポジティブな投票
         - -votes        :コミュニティのネガティブな投票
         ''')
-        df = pd.DataFrame.from_dict(result_dict, orient='index', columns=['Result','Negative Score','+votes','-votes','country'])
+        df = pd.DataFrame.from_dict(result_dict, orient='index', columns=['Result','Negative Score','+votes','-votes','country','tags','categories'])
         df.index.name = 'Target'
         st.write(df.style.applymap(vtScannerResultvView))
         #円グラフを描画

@@ -203,7 +203,7 @@ class VtScanner:
             report_exist = self.check_id(url_sha256,2)
             if report_exist[0]:
                 with open(report_exist[1],'r') as f:
-                    jsondata = json.load(f)                    
+                    jsondata = json.load(f)
                     return self.jsonDataConverter(jsondata)
             else:
                 output_filename = f"{URL_SCAN_DATA_PATH}/{url_sha256}.json"
@@ -211,6 +211,8 @@ class VtScanner:
                 url_response = requests.get(self.base_url + "/urls/" + url_sha256, headers=headers)
                 if url_response.status_code == 200:
                     result_url = url_response.json()
+                    #コメントを付与
+                    result_url["comments"] = self.get_comments(apikey,"url",url_sha256)
                     with open(output_filename, "w") as outfile:
                         json.dump(result_url, outfile)                
                     return self.jsonDataConverter(result_url)
@@ -228,7 +230,9 @@ class VtScanner:
                 output_filename = f"{IP_SCAN_DATA_PATH}/{ip_url}.json"
                 ip_response = requests.get(self.base_url + "/ip_addresses/" + ip_url, headers=headers)
                 if ip_response.status_code == 200:
-                    result_ip = ip_response.json()                
+                    result_ip = ip_response.json()
+                    #コメントを付与
+                    result_ip["comments"] = self.get_comments(apikey,"ip",ip_url)                                 
                     with open(output_filename, "w") as outfile:
                         json.dump(result_ip, outfile)                 
                     return self.jsonDataConverter(result_ip)
@@ -246,7 +250,9 @@ class VtScanner:
                 output_filename = f"{DOMAIN_SCAN_DATA_PATH}/{ip_url}.json"
                 domain_response = requests.get(self.base_url + "/domains/" + ip_url, headers=headers)
                 if domain_response.status_code == 200:
-                    result_domain = domain_response.json()                
+                    result_domain = domain_response.json()
+                    #コメントを付与
+                    result_domain["comments"] = self.get_comments(apikey,"domain",ip_url)                    
                     with open(output_filename, "w") as outfile:
                         json.dump(result_domain, outfile)                 
                     return self.jsonDataConverter(result_domain)
@@ -260,6 +266,29 @@ class VtScanner:
             #該当しない文字列の場合は、空の辞書を与える
             return self.jsonDataConverter({})
 
+    def get_comments(self,api_key:str,type:str,id:str)->list[dict]:
+        '''
+        typeを指定し、対応するエンドポイントにてコメントを取得する。
+        typeはurl,ip,domain,fileのいずれか
+        '''
+        url = ""
+        if type == "url":
+            url = f'{self.base_url}/urls/{id}/comments'
+        elif type == "ip":
+            url = f'{self.base_url}/ip_addresses/{id}/comments'
+        elif type == "domain":
+            url = f'{self.base_url}/domains/{id}/comments'
+        elif type == "file":
+            url = f'{self.base_url}/files/{id}/comments'
+        headers = {
+            'x-apikey': api_key
+        }
+        response = requests.get(url, headers=headers)
+        if response.status_code == 200:
+            return response.json()["data"]
+        else:
+            return [{}]
+        
     def chromeHistoryExtractor(self):
         # Chromeの履歴データベースのパスを取得
         #r'\\AppData\\Local\\Google\\Chrome\\User Data\\Default'

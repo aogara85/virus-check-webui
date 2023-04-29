@@ -21,7 +21,7 @@ class ScanResult:
     '''
     result_str:str
     detected: bool
-    categories:dict     #domain,URLのみ
+    categories:list    #domain,URLのみ
     country:str
     negative:int
     positive: int
@@ -94,22 +94,24 @@ class VtScanner:
             positive = jsondata["data"]["attributes"]["last_analysis_stats"]["harmless"]
             + jsondata["data"]["attributes"]["last_analysis_stats"]["undetected"]
             if jsondata["data"]["type"] == "file":
-                categories = {}
+                categories = []
                 country = "-"
                 total = jsondata["data"]["attributes"]["last_analysis_stats"]["type-unsupported"] + negative + positive
                 whois = ""
             elif jsondata["data"]["type"] == "domain":
-                categories = jsondata["data"]["attributes"]["categories"]
+                categories_dict = jsondata["data"]["attributes"]["categories"]
+                categories = [value for value in categories_dict.values() if categories_dict]
                 country = "-"
                 total = jsondata["data"]["attributes"]["last_analysis_stats"]["undetected"] + negative + positive
                 whois = jsondata["data"]["attributes"]["whois"]
             elif jsondata["data"]["type"] == "url":
-                categories = jsondata["data"]["attributes"]["categories"]
+                categories_dict = jsondata["data"]["attributes"]["categories"]
+                categories = [value for value in categories_dict.values() if categories_dict]
                 country = "-"
                 total = jsondata["data"]["attributes"]["last_analysis_stats"]["undetected"] + negative + positive
                 whois = ""
             else:
-                categories = {}
+                categories = []
                 country = jsondata["data"]["attributes"]["country"]
                 total = jsondata["data"]["attributes"]["last_analysis_stats"]["undetected"] + negative + positive
                 try:
@@ -138,7 +140,7 @@ class VtScanner:
             return ScanResult(
                 "Not found",
                 False,
-                {},
+                [],
                 "-",
                 -1,
                 -1,

@@ -222,7 +222,7 @@ def result_viewer():
                 with open(choice_result_viewer_file, "r") as f:
                     json_data = json.load(f)            
                 st.write(json_data)
-                
+
 def main():
     # サイドバーの設定
     st.sidebar.header("Menu")

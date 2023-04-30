@@ -118,14 +118,22 @@ def url_scan_page():
         ips_urls_list =ips_urls.split("\n")
         scanner = VtScanner()
         result_dict = {}
+        #コメント用
+        comment_dict = {}
         if ips_urls_list:
             #プログレスバーをサイドバーに表示
             progress_bar = st.sidebar.progress(0)
             status_text = st.sidebar.empty()
             n = 1
             for ip_url in ips_urls_list:
+                comment_tf = bool
                 result = scanner.ip_UrlScanner(api_key,ip_url.strip())
-                result_dict[ip_url.strip()] = [result.result_str,result.negative,result.positive_votes,result.negative_votes,result.country,result.tags,result.categories]
+                if result.recent_comment:
+                    comment_dict[ip_url.strip()] = result.recent_comment
+                    comment_tf=True
+                else:
+                    comment_tf=False                
+                result_dict[ip_url.strip()] = [result.result_str,result.negative,result.positive_votes,result.negative_votes,result.country,result.tags,comment_tf,result.categories]
                 progress_bar.progress(n / len(ips_urls_list))
                 status_text.text(f"処理中... {n * 100 // len(ips_urls_list)}%")
                 n += 1
@@ -137,18 +145,22 @@ def url_scan_page():
         - +votes        :コミュニティのポジティブな投票
         - -votes        :コミュニティのネガティブな投票
         ''')
-        df = pd.DataFrame.from_dict(result_dict, orient='index', columns=['Result','Negative Score','+votes','-votes','country','tags','categories'])
+        df = pd.DataFrame.from_dict(result_dict, orient='index', columns=['Result','Negative Score','+votes','-votes','country','tags','comment','categories'])
         df.index.name = 'Target'
         st.write(df.style.applymap(vtScannerResultvView))
+        tab1, tab2 = st.tabs(["Summary", "Comments"])        
         #円グラフを描画
-        labels = ["Detected", "Not found", "Safe"]
-        label_color = ['#FF0000','#D6C6AF','#228B22']
-        values = [(df == 'Detected').values.sum(), (df == 'Not found').values.sum(), (df == 'Safe').values.sum()]
-        fig, ax = plt.subplots()
-        ax.pie(values,colors=label_color ,labels=labels, autopct='%1.1f%%',textprops={'color': 'white'})
-        ax.axis("equal")
-        fig.set_facecolor('none')
-        st.pyplot(fig)
+        with tab1:
+            labels = ["Detected", "Not found", "Safe"]
+            label_color = ['#FF0000','#D6C6AF','#228B22']
+            values = [(df == 'Detected').values.sum(), (df == 'Not found').values.sum(), (df == 'Safe').values.sum()]
+            fig, ax = plt.subplots()
+            ax.pie(values,colors=label_color ,labels=labels, autopct='%1.1f%%',textprops={'color': 'white'})
+            ax.axis("equal")
+            fig.set_facecolor('none')
+            st.pyplot(fig)
+        with tab2:
+            st.write(comment_dict)
 
 
 def result_viewer():

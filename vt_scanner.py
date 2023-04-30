@@ -31,7 +31,9 @@ class ScanResult:
     tags: list
     scans: dict
     id:str
+    type:str
     whois:str           #domain,IPのみ
+    recent_comment:list
 
 class VtScanner:
     def __init__(self):
@@ -98,18 +100,30 @@ class VtScanner:
                 country = "-"
                 total = jsondata["data"]["attributes"]["last_analysis_stats"]["type-unsupported"] + negative + positive
                 whois = ""
+                recent_comment=[]
             elif jsondata["data"]["type"] == "domain":
                 categories_dict = jsondata["data"]["attributes"]["categories"]
                 categories = [value for value in categories_dict.values() if categories_dict]
                 country = "-"
                 total = jsondata["data"]["attributes"]["last_analysis_stats"]["undetected"] + negative + positive
-                whois = jsondata["data"]["attributes"]["whois"]
+                try:
+                    whois = jsondata["data"]["attributes"]["whois"]
+                except:
+                    whois = "No Data"
+                try:
+                    recent_comment= [i["attributes"]["text"] for i in jsondata["comments"]]
+                except:
+                    recent_comment=[]
             elif jsondata["data"]["type"] == "url":
                 categories_dict = jsondata["data"]["attributes"]["categories"]
                 categories = [value for value in categories_dict.values() if categories_dict]
                 country = "-"
                 total = jsondata["data"]["attributes"]["last_analysis_stats"]["undetected"] + negative + positive
                 whois = ""
+                try:
+                    recent_comment= [i["attributes"]["text"] for i in jsondata["comments"]]
+                except:
+                    recent_comment=[]
             else:
                 categories = []
                 country = jsondata["data"]["attributes"]["country"]
@@ -118,6 +132,10 @@ class VtScanner:
                     whois = jsondata["data"]["attributes"]["whois"]
                 except:
                     whois = "No Data"
+                try:
+                    recent_comment= [i["attributes"]["text"] for i in jsondata["comments"]]
+                except:
+                    recent_comment=[]
             positive_votes:int = jsondata["data"]["attributes"]["total_votes"]["harmless"]
             negative_votes:int = jsondata["data"]["attributes"]["total_votes"]["malicious"]
             av_result:dict = jsondata["data"]["attributes"]["last_analysis_results"]
@@ -134,7 +152,9 @@ class VtScanner:
                 jsondata["data"]["attributes"]["tags"],
                 av_result,
                 jsondata["data"]["id"],
-                whois
+                jsondata["data"]["type"],
+                whois,
+                recent_comment
             )
         else:
             return ScanResult(
@@ -149,6 +169,8 @@ class VtScanner:
                 -1,
                 [],
                 {},
+                "",
+                "",
                 "",
                 ""
             )
@@ -231,7 +253,6 @@ class VtScanner:
             else:
                 output_filename = f"{IP_SCAN_DATA_PATH}/{ip_url}.json"
                 ip_response = requests.get(self.base_url + "/ip_addresses/" + ip_url, headers=headers)
-                print(ip_response.status_code)
                 if ip_response.status_code == 200:
                     result_ip = ip_response.json()
                     #コメントを付与

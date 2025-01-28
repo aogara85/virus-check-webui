@@ -96,7 +96,7 @@ def filehash_scan_page():
             df2 = pd.DataFrame.from_dict(file_scaned_dict, orient='index', columns=['Result','Negative Score','+votes','-votes'])
             df2.index.name = 'File Name'
         # データフレームを表示
-            st.write(df2.style.applymap(vtScannerResultvView))
+            st.write(df2.style.map(vtScannerResultvView))
         #円グラフを描画
             labels = ["Detected", "Not found", "Safe"]
             label_color = ['#FF0000','#D6C6AF','#228B22']
@@ -147,7 +147,7 @@ def url_scan_page():
         ''')
         df = pd.DataFrame.from_dict(result_dict, orient='index', columns=['Result','Negative Score','+votes','-votes','country','tags','comment','categories'])
         df.index.name = 'Target'
-        st.write(df.style.applymap(vtScannerResultvView))
+        st.write(df.style.map(vtScannerResultvView))
         tab1, tab2 = st.tabs(["Summary", "Comments"])        
         #円グラフを描画
         with tab1:
@@ -183,7 +183,7 @@ def result_viewer():
                     jsondata = json.load(f)                
                     read_result = scanner.jsonDataConverter(jsondata)
                 df = pd.DataFrame.from_dict(read_result.scans).T
-                styled_df = df.style.applymap(highlight_not_none, subset=["category","result"])
+                styled_df = df.style.map(highlight_not_none, subset=["category","result"])
                 st.dataframe(styled_df)
             with tab2:
                 with open(choice_result_viewer_file, "r") as f:
@@ -198,7 +198,7 @@ def result_viewer():
                     jsondata = json.load(f)                
                     read_result = scanner.jsonDataConverter(jsondata)
                 df = pd.DataFrame.from_dict(read_result.scans).T
-                styled_df = df.style.applymap(highlight_not_none, subset=["category","result"])
+                styled_df = df.style.map(highlight_not_none, subset=["category","result"])
                 st.dataframe(styled_df)
             with tab2:
                 with open(choice_result_viewer_file, "r") as f:
@@ -213,7 +213,7 @@ def result_viewer():
                     jsondata = json.load(f)                
                     read_result = scanner.jsonDataConverter(jsondata)
                 df = pd.DataFrame.from_dict(read_result.scans).T
-                styled_df = df.style.applymap(highlight_not_none, subset=["category","result"])
+                styled_df = df.style.map(highlight_not_none, subset=["category","result"])
                 st.dataframe(styled_df)
             with tab2:
                 with open(choice_result_viewer_file, "r") as f:
@@ -228,7 +228,7 @@ def result_viewer():
                     jsondata = json.load(f)                
                     read_result = scanner.jsonDataConverter(jsondata)
                 df = pd.DataFrame.from_dict(read_result.scans).T
-                styled_df = df.style.applymap(highlight_not_none, subset=["category","result"])
+                styled_df = df.style.map(highlight_not_none, subset=["category","result"])
                 st.dataframe(styled_df)
             with tab2:
                 with open(choice_result_viewer_file, "r") as f:

@@ -282,7 +282,7 @@ class VtScanner:
                     return self.jsonDataConverter(result_domain)
                 else:
                     return self.jsonDataConverter({})
-        elif re.match(md5_pattern,ip_url) and re.match(sha1_pattern,ip_url) and re.match(sha256_pattern,ip_url):
+        elif re.match(md5_pattern,ip_url) or re.match(sha1_pattern,ip_url) or re.match(sha256_pattern,ip_url):
             #Hash値の場合
             return self.hashScanner(apikey,ip_url,ip_url,False)
         

@@ -8,6 +8,7 @@ import pandas as pd
 from vt_scanner import VtScanner
 from vt_scanner import ScanResult
 import matplotlib.pyplot as plt
+from generalReport import ReportGenerator
 
 def vtScannerResultvView(score):
     if type(score) == int and score > 0 :
@@ -128,6 +129,7 @@ def url_scan_page():
             for ip_url in ips_urls_list:
                 comment_tf = bool
                 result = scanner.ip_UrlScanner(api_key,ip_url.strip())
+
                 if result.recent_comment:
                     comment_dict[ip_url.strip()] = result.recent_comment
                     comment_tf=True
@@ -145,6 +147,13 @@ def url_scan_page():
         - +votes        :コミュニティのポジティブな投票
         - -votes        :コミュニティのネガティブな投票
         ''')
+        # レポート生成
+        generator = ReportGenerator()
+        html_report = generator.generate_html_report(result_dict)
+        
+        # HTMLファイルとして保存
+        with open("report.html", "w", encoding="utf-8") as f:
+            f.write(html_report)        
         df = pd.DataFrame.from_dict(result_dict, orient='index', columns=['Result','Negative Score','+votes','-votes','country','tags','comment','categories'])
         df.index.name = 'Target'
         st.write(df.style.map(vtScannerResultvView))

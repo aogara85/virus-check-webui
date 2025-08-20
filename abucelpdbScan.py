@@ -4,6 +4,11 @@ import csv
 from datetime import datetime
 import sys
 import ipaddress
+import os
+
+# データフォルダのパス設定
+DATA_FOLDER_ROOT_PATH = ".\\data"
+ABUSEIPDB_SCAN_DATA_PATH = ".\\data\\abuseipdbscan"
 
 class AbuseIPDBChecker:
     def __init__(self, api_key):
@@ -19,14 +24,45 @@ class AbuseIPDBChecker:
             'Accept': 'application/json',
             'Key': self.api_key
         }
+        
+        # アウトプットのディレクトリ作成
+        os.makedirs(DATA_FOLDER_ROOT_PATH, exist_ok=True)
+        os.makedirs(ABUSEIPDB_SCAN_DATA_PATH, exist_ok=True)
 
-    def check_ip(self, ip_address, days=30):
+    def get_file_list(self):
+        """
+        スキャン結果の保存先のファイル名とフルパスのリストを返す
+        """
+        file_fullpath_list = []
+        if os.path.exists(ABUSEIPDB_SCAN_DATA_PATH):
+            file_list = os.listdir(ABUSEIPDB_SCAN_DATA_PATH)
+            for filename in file_list:
+                file_fullpath_list.append(os.path.join(ABUSEIPDB_SCAN_DATA_PATH, filename))
+        return file_fullpath_list
+
+    def check_id(self, ip_address):
+        """
+        スキャン結果のIPアドレスが一致するファイルの存在をチェックする。
+        返り値はタプル（存在有無をbool、存在した場合のフルパス）
+        """
+        for file_path in self.get_file_list():
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    jsondata = json.load(f)
+                    if "data" in jsondata and jsondata["data"].get("ipAddress") == ip_address:
+                        return (True, file_path)
+            except (json.JSONDecodeError, KeyError, FileNotFoundError):
+                continue
+        return (False, "")
+
+    def check_ip(self, ip_address, days=30, overwrite=False):
         """
         単一のIPアドレスをチェック
         
         Args:
             ip_address (str): チェックするIPアドレス
             days (int): 過去何日分のレポートを確認するか（デフォルト30日）
+            overwrite (bool): 既存ファイルを上書きするかどうか
         
         Returns:
             dict: APIレスポンス
@@ -34,21 +70,51 @@ class AbuseIPDBChecker:
         try:
             ipaddress.ip_address(ip_address)
             
-            check_url = f"{self.base_url}/check"
-            params = {
-                'ipAddress': ip_address,
-                'maxAgeInDays': days
-            }
+            # 既存ファイルのチェック
+            report_check = self.check_id(ip_address)
             
-            response = requests.get(check_url, headers=self.headers, params=params)
-            response.raise_for_status()
+            # 上書き設定がONなら既存チェックをオフに
+            if overwrite:
+                report_check = (False, "")
             
-            return response.json()
-        
+            output_filename = f"{ABUSEIPDB_SCAN_DATA_PATH}/{ip_address}.json"
+            
+            # 既にスキャン済ファイルであれば、jsonファイルから読み出す
+            if report_check[0]:
+                with open(report_check[1], 'r', encoding='utf-8') as f:
+                    jsondata = json.load(f)
+                    return jsondata
+            else:
+                check_url = f"{self.base_url}/check"
+                params = {
+                    'ipAddress': ip_address,
+                    'maxAgeInDays': days
+                }
+                
+                response = requests.get(check_url, headers=self.headers, params=params)
+                response.raise_for_status()
+                
+                result = response.json()
+                
+                # レスポンスをファイルに保存
+                with open(output_filename, "w", encoding='utf-8') as outfile:
+                    json.dump(result, outfile, ensure_ascii=False, indent=2)
+                
+                return result
+            
         except ValueError as e:
-            return {"error": f"Invalid IP address: {str(e)}"}
+            error_response = {"error": f"Invalid IP address: {str(e)}"}
+            return error_response
         except requests.exceptions.RequestException as e:
-            return {"error": f"API request failed: {str(e)}"}
+            error_response = {"error": f"API request failed: {str(e)}"}
+            # エラーレスポンスもファイルに保存
+            try:
+                output_filename = f"{ABUSEIPDB_SCAN_DATA_PATH}/{ip_address}_error.json"
+                with open(output_filename, "w", encoding='utf-8') as outfile:
+                    json.dump(error_response, outfile, ensure_ascii=False, indent=2)
+            except:
+                pass
+            return error_response
 
     def get_reports(self, ip_address, days=30, limit=100):
         """
